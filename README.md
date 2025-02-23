@@ -2,7 +2,7 @@
 
 Welcome to **TetrisTwist 3D** – where the classic Tetris game meets a mind-bending 3D twist! Get ready to rotate, drop, and strategize in a whole new dimension. Built with love and a sprinkle of magic by [@heyanabelle](https://heyanabelle.com).
 
-🌐 **Play Now**: [tetristrist.heyanabelle.com](https://tetristrist.heyanabelle.com)
+🌐 **Play Now**: [tetristrist.heyanabelle.com](https://tetristwist.heyanabelle.com)
 
 ## 🚀 Features
 
