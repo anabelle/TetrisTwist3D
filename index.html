@@ -48,7 +48,7 @@
       z-index: 10;
     }
 
-    /* Controls (help, pause, mute) */
+    /* Controls (help, pause, mute, options) */
     #controls {
       position: fixed;
       top: 170px;
@@ -110,7 +110,7 @@
       transform: translateX(-50%);
     }
 
-    /* Help popup */
+    /* Help and Options popups */
     .popup {
       display: none;
       position: fixed;
@@ -159,6 +159,7 @@
     <div id="helpIcon" class="icon">?</div>
     <div id="pauseIcon" class="icon">||</div>
     <div id="muteIcon" class="icon">🔇</div>
+    <div id="optionsIcon" class="icon">⚙</div>
   </div>
   <!-- On-screen rotate buttons -->
   <div id="rotateLeftButton" class="rotate-button">&#x21ba;</div>
@@ -180,6 +181,23 @@
         <li><strong>🔄</strong>: Rotate camera 90°.</li>
       </ul>
       <p>Built with ❤️ by <a href="https://heyanabelle.com" target="_blank">@heyanabelle</a></p>
+    </div>
+  </div>
+  <!-- Options popup -->
+  <div id="optionsPopup" class="popup">
+    <div class="popup-content">
+      <span id="closeOptions" class="close">&times;</span>
+      <h2>Options</h2>
+      <div>
+        <label for="speedSelect">Falling Speed (ms per drop): </label>
+        <input type="range" id="speedSelect" min="200" max="2000" step="100" value="1000">
+        <span id="speedValue">1000</span>
+      </div>
+      <div style="margin-top: 10px;">
+        <p>Clearing Mode:</p>
+        <label><input type="radio" name="clearMode" value="layer" checked> Layer (complete horizontal layer)</label><br>
+        <label><input type="radio" name="clearMode" value="rows"> Rows (complete rows along both X and Z)</label>
+      </div>
     </div>
   </div>
 
@@ -213,13 +231,19 @@
       };
     }
 
-    // --- Global game variables ---
+    // --- Global game variables and options ---
     const BOARD_WIDTH = 8, BOARD_DEPTH = 8, BOARD_HEIGHT = 20;
     let score = 0;
     let isPaused = true;
     let highScore = Number(localStorage.getItem("highScore")) || 0;
     const highScoreElement = document.getElementById("highscore");
     highScoreElement.textContent = highScore > 0 ? "High Score: " + highScore : "";
+    // Game options: dropInterval in ms and clearMode ('layer' default or 'rows')
+    let gameOptions = {
+      dropInterval: 1000,
+      clearMode: 'layer'
+    };
+
     // Initialize board array
     const board = [];
     for (let x = 0; x < BOARD_WIDTH; x++) {
@@ -247,7 +271,7 @@
     const pieceRotateSound = new Audio("videogame_tetris-piece-rotate.mp3");
     pieceRotateSound.volume = 0.4; pieceRotateSound.muted = isMuted;
 
-    // Add mute/unmute toggle event listener
+    // Mute/unmute toggle
     document.getElementById('muteIcon').addEventListener('click', () => {
       isMuted = !isMuted;
       backgroundMusic.setVolume(isMuted ? 0 : 0.5);
@@ -257,6 +281,44 @@
       gameOverSound.muted = isMuted;
       pieceRotateSound.muted = isMuted;
       document.getElementById('muteIcon').textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    // --- Options modal event listeners ---
+    const optionsPopup = document.getElementById('optionsPopup');
+    const optionsIcon = document.getElementById('optionsIcon');
+    const closeOptions = document.getElementById('closeOptions');
+    const speedSelect = document.getElementById('speedSelect');
+    const speedValue = document.getElementById('speedValue');
+    optionsIcon.addEventListener('click', () => {
+      optionsPopup.style.display = 'block';
+      isPaused = true;
+    });
+    closeOptions.addEventListener('click', () => {
+      optionsPopup.style.display = 'none';
+      // Update game options from the modal
+      gameOptions.dropInterval = parseInt(speedSelect.value);
+      speedValue.textContent = speedSelect.value;
+      const radios = document.getElementsByName('clearMode');
+      radios.forEach(radio => {
+        if (radio.checked) {
+          gameOptions.clearMode = radio.value;
+        }
+      });
+      isPaused = false;
+    });
+    speedSelect.addEventListener('input', () => {
+      speedValue.textContent = speedSelect.value;
+    });
+
+    // --- Help modal event listeners ---
+    const helpPopup = document.getElementById('helpPopup');
+    const helpIcon = document.getElementById('helpIcon');
+    const closeHelp = document.getElementById('closeHelp');
+    helpIcon.addEventListener('click', () => { helpPopup.style.display = 'block'; isPaused = true; });
+    closeHelp.addEventListener('click', () => { helpPopup.style.display = 'none'; isPaused = false; });
+    window.addEventListener('click', (event) => {
+      if (event.target === helpPopup) { helpPopup.style.display = 'none'; isPaused = false; }
+      if (event.target === optionsPopup) { optionsPopup.style.display = 'none'; isPaused = false; }
     });
 
     // --- Scene, camera, and renderer ---
@@ -604,7 +666,6 @@
     let currentPiece = null;
     let nextPieceShape = randomShape();
     let isFastDropping = false;
-    const dropInterval = 1000;
     let lastDropTime = Date.now();
     function randomShape() {
       const keys = Object.keys(pieceShapes);
@@ -640,44 +701,112 @@
       if (score > highScore) { highScore = score; localStorage.setItem("highScore", highScore); }
       highScoreElement.textContent = highScore > 0 ? "High Score: " + highScore : "";
     }
+
+    // --- Updated clearLayers: Support for chain reactions in both layer and row modes ---
     function clearLayers() {
-      let layersCleared = 0;
-      for (let y = 0; y < BOARD_HEIGHT; y++) {
-        let full = true;
-        for (let x = 0; x < BOARD_WIDTH; x++) {
-          for (let z = 0; z < BOARD_DEPTH; z++) {
-            if (board[x][z][y] === null) { full = false; break; }
-          }
-          if (!full) break;
-        }
-        if (full) {
-          layersCleared++;
+      let linesCleared = 0;
+      if (gameOptions.clearMode === 'layer') {
+        for (let y = 0; y < BOARD_HEIGHT; y++) {
+          let full = true;
           for (let x = 0; x < BOARD_WIDTH; x++) {
             for (let z = 0; z < BOARD_DEPTH; z++) {
-              boardGroup.remove(board[x][z][y]);
-              board[x][z][y] = null;
+              if (board[x][z][y] === null) { full = false; break; }
             }
+            if (!full) break;
           }
-          for (let ty = y + 1; ty < BOARD_HEIGHT; ty++) {
+          if (full) {
             for (let x = 0; x < BOARD_WIDTH; x++) {
               for (let z = 0; z < BOARD_DEPTH; z++) {
-                if (board[x][z][ty] !== null) {
-                  board[x][z][ty].position.y -= 1;
-                  board[x][z][ty - 1] = board[x][z][ty];
-                  board[x][z][ty] = null;
+                boardGroup.remove(board[x][z][y]);
+                board[x][z][y] = null;
+              }
+            }
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+              for (let z = 0; z < BOARD_DEPTH; z++) {
+                for (let ty = y + 1; ty < BOARD_HEIGHT; ty++) {
+                  if (board[x][z][ty] !== null) {
+                    board[x][z][ty].position.y -= 1;
+                    board[x][z][ty - 1] = board[x][z][ty];
+                    board[x][z][ty] = null;
+                  }
                 }
               }
             }
+            linesCleared++;
+            y--; // recheck the same level after shifting
           }
-          y--;
+        }
+      } else if (gameOptions.clearMode === 'rows') {
+        // Loop until no new rows are cleared anywhere on the board.
+        let chainOccurred = true;
+        while (chainOccurred) {
+          chainOccurred = false;
+          // Clear rows along X direction (for each fixed z and y)
+          for (let z = 0; z < BOARD_DEPTH; z++) {
+            for (let y = 0; y < BOARD_HEIGHT; ) {
+              let full = true;
+              for (let x = 0; x < BOARD_WIDTH; x++) {
+                if (board[x][z][y] === null) { full = false; break; }
+              }
+              if (full) {
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                  boardGroup.remove(board[x][z][y]);
+                  board[x][z][y] = null;
+                }
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                  for (let ty = y + 1; ty < BOARD_HEIGHT; ty++) {
+                    if (board[x][z][ty] !== null) {
+                      board[x][z][ty].position.y -= 1;
+                      board[x][z][ty - 1] = board[x][z][ty];
+                      board[x][z][ty] = null;
+                    }
+                  }
+                }
+                linesCleared++;
+                chainOccurred = true;
+                // Do not increment y so the same level is re-checked.
+              } else {
+                y++;
+              }
+            }
+          }
+          // Clear rows along Z direction (for each fixed x and y)
+          for (let x = 0; x < BOARD_WIDTH; x++) {
+            for (let y = 0; y < BOARD_HEIGHT; ) {
+              let full = true;
+              for (let z = 0; z < BOARD_DEPTH; z++) {
+                if (board[x][z][y] === null) { full = false; break; }
+              }
+              if (full) {
+                for (let z = 0; z < BOARD_DEPTH; z++) {
+                  boardGroup.remove(board[x][z][y]);
+                  board[x][z][y] = null;
+                }
+                for (let z = 0; z < BOARD_DEPTH; z++) {
+                  for (let ty = y + 1; ty < BOARD_HEIGHT; ty++) {
+                    if (board[x][z][ty] !== null) {
+                      board[x][z][ty].position.y -= 1;
+                      board[x][z][ty - 1] = board[x][z][ty];
+                      board[x][z][ty] = null;
+                    }
+                  }
+                }
+                linesCleared++;
+                chainOccurred = true;
+              } else {
+                y++;
+              }
+            }
+          }
         }
       }
-      if (layersCleared > 0) {
-        score += layersCleared * 100;
+      if (linesCleared > 0) {
+        score += linesCleared * 100;
         updateScore();
         clearSound.play();
       }
     }
+
     function getHorizontalMovementVector(direction) {
       const dx = direction === -1 ? Math.sin(currentCameraTheta) : -Math.sin(currentCameraTheta);
       const dz = direction === -1 ? -Math.cos(currentCameraTheta) : Math.cos(currentCameraTheta);
@@ -909,17 +1038,6 @@
       targetCameraTheta += Math.PI / 2;
     });
 
-    const helpPopup = document.getElementById('helpPopup');
-    const helpIcon = document.getElementById('helpIcon');
-    const closeHelp = document.getElementById('closeHelp');
-    helpIcon.addEventListener('click', () => { helpPopup.style.display = 'block'; isPaused = true; });
-    closeHelp.addEventListener('click', () => { helpPopup.style.display = 'none'; isPaused = false; });
-    window.addEventListener('click', (event) => { if (event.target === helpPopup) { helpPopup.style.display = 'none'; isPaused = false; } });
-    document.getElementById('pauseIcon').addEventListener('click', () => {
-      isPaused = !isPaused;
-      document.getElementById('pauseIcon').textContent = isPaused ? '▶' : '||';
-    });
-
     // --- Main loop ---
     let lastTime = 0;
     function animate(time) {
@@ -939,7 +1057,7 @@
           }
         }
         const now = Date.now();
-        if (currentPiece && now - lastDropTime > dropInterval) {
+        if (currentPiece && now - lastDropTime > gameOptions.dropInterval) {
           if (!currentPiece.move(0, -1, 0)) {
             currentPiece.fixToBoard();
             dropSound.currentTime = 0;
