@@ -17,34 +17,28 @@
       display: block;
     }
 
-    #score {
+    #score,
+    #highscore {
       position: fixed;
-      top: 10px;
       left: 10px;
       color: white;
       font-family: sans-serif;
-      font-size: 20px;
-      z-index: 10;
       user-select: none;
       -webkit-user-select: none;
       -moz-user-select: none;
       -ms-user-select: none;
       -webkit-touch-callout: none;
+      z-index: 10;
+    }
+
+    #score {
+      top: 10px;
+      font-size: 20px;
     }
 
     #highscore {
-      position: fixed;
       top: 35px;
-      left: 10px;
-      color: white;
-      font-family: sans-serif;
       font-size: 16px;
-      z-index: 10;
-      user-select: none;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      -webkit-touch-callout: none;
     }
 
     #nextPieceContainer {
@@ -83,7 +77,7 @@
       user-select: none;
     }
 
-    /* Subtle rotate button at bottom center */
+    /* On-screen rotate button */
     .rotate-button {
       position: fixed;
       bottom: 20px;
@@ -111,7 +105,7 @@
       box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
     }
 
-    /* Popup de ayuda */
+    /* Help popup */
     .popup {
       display: none;
       position: fixed;
@@ -163,7 +157,7 @@
   </div>
   <!-- On-screen rotate button -->
   <div id="rotateButton" class="rotate-button">&#x21ba;</div>
-  <!-- Popup de ayuda -->
+  <!-- Help popup -->
   <div id="helpPopup" class="popup">
     <div class="popup-content">
       <span id="closeHelp" class="close">&times;</span>
@@ -186,7 +180,7 @@
   <script type="module">
     import * as THREE from './three.module.js';
 
-    // Utility functions for debouncing and throttling
+    // --- Utility functions: debounce and throttle ---
     function debounce(func, wait, immediate) {
       let timeout;
       return function (...args) {
@@ -201,7 +195,6 @@
         if (callNow) func.apply(context, args);
       };
     }
-
     function throttle(func, limit) {
       let inThrottle;
       return function (...args) {
@@ -214,11 +207,14 @@
       };
     }
 
-    // -----------------------
-    // Audio: Load background music asynchronously using THREE.AudioLoader
-    // -----------------------
+    // --- Mobile detection and settings ---
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+    // On mobile, disable antialias and shadows, and reduce texture sizes
+    const rendererParams = { antialias: !isMobile };
+
+    // --- Audio setup ---
     let isMuted = true;
-    let backgroundMusic; // Will be assigned later
+    let backgroundMusic;
     const dropSound = new Audio("videogame_tetris-drop.mp3");
     dropSound.volume = 0.4;
     dropSound.muted = isMuted;
@@ -235,9 +231,7 @@
     pieceRotateSound.volume = 0.4;
     pieceRotateSound.muted = isMuted;
 
-    // -----------------------
-    // Scene, camera, and main renderer
-    // -----------------------
+    // --- Scene, camera, and renderer ---
     const scene = new THREE.Scene();
     const BOARD_WIDTH = 8, BOARD_DEPTH = 8, BOARD_HEIGHT = 20;
     const boardCenter = new THREE.Vector3(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, BOARD_DEPTH / 2);
@@ -252,7 +246,7 @@
     }
     updateCamera();
 
-    // Attach audio listener & load background music
+    // Audio listener and background music load
     const listener = new THREE.AudioListener();
     camera.add(listener);
     backgroundMusic = new THREE.Audio(listener);
@@ -266,9 +260,11 @@
       }, { once: true });
     });
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    // Create renderer (disable antialias on mobile)
+    const renderer = new THREE.WebGLRenderer(rendererParams);
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
+    // Disable shadows on mobile for performance
+    renderer.shadowMap.enabled = !isMobile;
     document.body.appendChild(renderer.domElement);
 
     // Handle lost/restored WebGL context
@@ -291,9 +287,7 @@
       bgSphere.material.needsUpdate = true;
     }, false);
 
-    // -----------------------
-    // Audio mute toggle
-    // -----------------------
+    // --- Audio mute toggle ---
     document.getElementById('muteIcon').addEventListener('click', () => {
       isMuted = !isMuted;
       backgroundMusic.setVolume(isMuted ? 0 : 0.5);
@@ -305,18 +299,12 @@
       document.getElementById('muteIcon').textContent = isMuted ? '🔇' : '🔊';
     });
 
-    // -----------------------
-    // Board data
-    // -----------------------
+    // --- Board data ---
     let score = 0;
     let isPaused = true;
     let highScore = Number(localStorage.getItem("highScore")) || 0;
     const highScoreElement = document.getElementById("highscore");
-    if (highScore > 0) {
-      highScoreElement.textContent = "High Score: " + highScore;
-    } else {
-      highScoreElement.textContent = "";
-    }
+    highScoreElement.textContent = highScore > 0 ? "High Score: " + highScore : "";
     const board = [];
     for (let x = 0; x < BOARD_WIDTH; x++) {
       board[x] = [];
@@ -325,44 +313,49 @@
       }
     }
 
-    // -----------------------
-    // Scene setup
-    // -----------------------
-    const bgGeometry = new THREE.SphereGeometry(500, 32, 32);
-    const bgMaterial = new THREE.ShaderMaterial({
-      uniforms: { time: { value: 0.0 } },
-      vertexShader: `
-        varying vec3 vPos;
-        void main(){
-          vPos = normalize(position);
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform float time;
-        varying vec3 vPos;
-        const float PI = 3.141592653589793;
-        void main(){
-          float angle = atan(vPos.z, vPos.x);
-          float u = fract(angle / (2.0 * PI) + 0.5);
-          float v = (asin(vPos.y) / PI) + 0.5;
-          float freq = 4.0;
-          vec3 color = vec3(
-            0.2 + 0.2 * sin(time + freq * 2.0 * PI * u),
-            0.2 + 0.2 * cos(time + freq * 2.0 * PI * v),
-            0.3 + 0.2 * sin(time + freq * 2.0 * PI * u * 0.5)
-          );
-          gl_FragColor = vec4(color, 1.0);
-        }
-      `,
-      side: THREE.BackSide
-    });
-    const bgSphere = new THREE.Mesh(bgGeometry, bgMaterial);
-    scene.add(bgSphere);
+    // --- Scene setup ---
+    // On mobile, use a static background color instead of an animated shader.
+    let bgSphere;
+    if (isMobile) {
+      scene.background = new THREE.Color(0x111111);
+    } else {
+      const bgGeometry = new THREE.SphereGeometry(500, 32, 32);
+      const bgMaterial = new THREE.ShaderMaterial({
+        uniforms: { time: { value: 0.0 } },
+        vertexShader: `
+          varying vec3 vPos;
+          void main(){
+            vPos = normalize(position);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform float time;
+          varying vec3 vPos;
+          const float PI = 3.141592653589793;
+          void main(){
+            float angle = atan(vPos.z, vPos.x);
+            float u = fract(angle / (2.0*PI) + 0.5);
+            float v = (asin(vPos.y)/PI) + 0.5;
+            float freq = 4.0;
+            vec3 color = vec3(
+              0.2 + 0.2*sin(time + freq*2.0*PI*u),
+              0.2 + 0.2*cos(time + freq*2.0*PI*v),
+              0.3 + 0.2*sin(time + freq*2.0*PI*u*0.5)
+            );
+            gl_FragColor = vec4(color, 1.0);
+          }
+        `,
+        side: THREE.BackSide
+      });
+      bgSphere = new THREE.Mesh(bgGeometry, bgMaterial);
+      scene.add(bgSphere);
+    }
 
-    // Floor texture creation function
+    // --- Floor texture creation ---
     function createLargeFloorTexture() {
-      const size = 1024;
+      // Use a smaller size on mobile
+      const size = isMobile ? 512 : 1024;
       const canvas = document.createElement('canvas');
       canvas.width = size;
       canvas.height = size;
@@ -390,19 +383,15 @@
         ctx.lineTo(endX, yPos);
         ctx.stroke();
       }
-      const gradient = ctx.createRadialGradient(
-        size / 2, size / 2, size * 0.4,
-        size / 2, size / 2, size * 0.55
-      );
-      gradient.addColorStop(0, "rgba(255, 255, 255, 0.0)");
-      gradient.addColorStop(1, "rgba(255, 255, 255, 1.0)");
+      const gradient = ctx.createRadialGradient(size / 2, size / 2, size * 0.4, size / 2, size / 2, size * 0.55);
+      gradient.addColorStop(0, "rgba(255,255,255,0.0)");
+      gradient.addColorStop(1, "rgba(255,255,255,1.0)");
       ctx.globalCompositeOperation = "destination-out";
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, size, size);
       ctx.globalCompositeOperation = "source-over";
       return new THREE.CanvasTexture(canvas);
     }
-
     const floorTexture = createLargeFloorTexture();
     const planeGeometry = new THREE.PlaneGeometry(80, 80);
     const planeMaterial = new THREE.MeshPhongMaterial({
@@ -413,15 +402,15 @@
     const plane = new THREE.Mesh(planeGeometry, planeMaterial);
     plane.rotation.x = -Math.PI / 2;
     plane.position.set(BOARD_WIDTH / 2, 0, BOARD_DEPTH / 2);
-    plane.receiveShadow = true;
+    plane.receiveShadow = !isMobile;
     scene.add(plane);
 
-    // Lighting
+    // --- Lighting ---
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
     scene.add(ambientLight);
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
     directionalLight.position.set(0, 50, 50);
-    directionalLight.castShadow = true;
+    directionalLight.castShadow = !isMobile;
     directionalLight.shadow.mapSize.width = 1024;
     directionalLight.shadow.mapSize.height = 1024;
     directionalLight.shadow.camera.near = 1;
@@ -432,7 +421,7 @@
     directionalLight.shadow.camera.bottom = -50;
     scene.add(directionalLight);
 
-    // Board visualization groups
+    // --- Board visualization ---
     const boardGroup = new THREE.Group();
     scene.add(boardGroup);
     const ghostGroup = new THREE.Group();
@@ -444,9 +433,10 @@
     wireframe.position.set(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, BOARD_DEPTH / 2);
     scene.add(wireframe);
 
-    // Block textures
+    // --- Block textures ---
     function createBlockTexture(hexColor) {
-      const size = 64;
+      // Use smaller size on mobile
+      const size = isMobile ? 32 : 64;
       const canvas = document.createElement('canvas');
       canvas.width = size;
       canvas.height = size;
@@ -454,7 +444,7 @@
       ctx.fillStyle = hexColor;
       ctx.fillRect(0, 0, size, size);
       ctx.strokeStyle = "#000000";
-      ctx.lineWidth = 8;
+      ctx.lineWidth = isMobile ? 4 : 8;
       ctx.strokeRect(0, 0, size, size);
       const texture = new THREE.CanvasTexture(canvas);
       texture.magFilter = THREE.NearestFilter;
@@ -467,7 +457,7 @@
       return new THREE.MeshPhongMaterial({ map: createBlockTexture(hexStr) });
     });
 
-    // Helper for rotating piece face mapping
+    // --- Helper for rotating piece face mapping ---
     function updateMaterialMapping(oldMapping, axis) {
       const canonical = {
         right: new THREE.Vector3(1, 0, 0),
@@ -492,7 +482,6 @@
       }
       return newMapping;
     }
-
     function createGhostCube(x, y, z, size = 1) {
       const material = new THREE.MeshPhongMaterial({
         color: 0xffffff,
@@ -507,7 +496,7 @@
       return cube;
     }
 
-    // All possible shapes
+    // --- Piece shapes ---
     const pieceShapes = {
       I: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, { x: 2, y: 0, z: 0 }, { x: 3, y: 0, z: 0 }],
       O: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 1, y: 1, z: 0 }],
@@ -519,25 +508,13 @@
         { x: 0, y: 0, z: 1 }, { x: 1, y: 0, z: 1 },
         { x: 0, y: 1, z: 1 }, { x: 1, y: 1, z: 1 }
       ],
-      L: [
-        { x: 0, y: 0, z: 0 },
-        { x: 0, y: 1, z: 0 },
-        { x: 0, y: 2, z: 0 },
-        { x: 1, y: 2, z: 0 }
-      ]
+      L: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 0, y: 2, z: 0 }, { x: 1, y: 2, z: 0 }]
     };
-
     function rotateVectorAroundAxis(v, axis) {
       const vec = new THREE.Vector3(v.x, v.y, v.z);
       vec.applyAxisAngle(axis, Math.PI / 2);
-      return {
-        x: Math.round(vec.x),
-        y: Math.round(vec.y),
-        z: Math.round(vec.z)
-      };
+      return { x: Math.round(vec.x), y: Math.round(vec.y), z: Math.round(vec.z) };
     }
-
-    // Create a single cube with the 6 materials from FIXED_MATERIALS
     function createSharedMaterialCube(x, y, z, mapping) {
       const geometry = new THREE.BoxGeometry(1, 1, 1);
       const materialsForCube = [
@@ -550,12 +527,12 @@
       ];
       const cube = new THREE.Mesh(geometry, materialsForCube);
       cube.position.set(x + 0.5, y + 0.5, z + 0.5);
-      cube.castShadow = true;
-      cube.receiveShadow = true;
+      cube.castShadow = !isMobile;
+      cube.receiveShadow = !isMobile;
       return cube;
     }
 
-    // Piece class
+    // --- Piece class ---
     class Piece {
       constructor(shape) {
         this.shape = shape.map(v => ({ ...v }));
@@ -583,13 +560,9 @@
           ];
           const geometry = new THREE.BoxGeometry(1, 1, 1);
           const cube = new THREE.Mesh(geometry, materialsForCube);
-          cube.position.set(
-            this.x + pos.x + 0.5,
-            this.y + pos.y + 0.5,
-            this.z + pos.z + 0.5
-          );
-          cube.castShadow = true;
-          cube.receiveShadow = true;
+          cube.position.set(this.x + pos.x + 0.5, this.y + pos.y + 0.5, this.z + pos.z + 0.5);
+          cube.castShadow = !isMobile;
+          cube.receiveShadow = !isMobile;
           this.group.add(cube);
         }
       }
@@ -598,12 +571,8 @@
           const newX = this.x + pos.x + dx;
           const newY = this.y + pos.y + dy;
           const newZ = this.z + pos.z + dz;
-          if (newX < 0 || newX >= BOARD_WIDTH || newZ < 0 || newZ >= BOARD_DEPTH || newY < 0) {
-            return false;
-          }
-          if (newY < BOARD_HEIGHT && board[newX][newZ][newY] !== null) {
-            return false;
-          }
+          if (newX < 0 || newX >= BOARD_WIDTH || newZ < 0 || newZ >= BOARD_DEPTH || newY < 0) return false;
+          if (newY < BOARD_HEIGHT && board[newX][newZ][newY] !== null) return false;
         }
         return true;
       }
@@ -638,12 +607,7 @@
             const newX = this.x + pos.x + offset.dx;
             const newY = this.y + pos.y + offset.dy;
             const newZ = this.z + pos.z + offset.dz;
-            if (
-              newX < 0 || newX >= BOARD_WIDTH ||
-              newZ < 0 || newZ >= BOARD_DEPTH ||
-              newY < 0 || newY >= BOARD_HEIGHT ||
-              board[newX][newZ][newY] !== null
-            ) {
+            if (newX < 0 || newX >= BOARD_WIDTH || newZ < 0 || newZ >= BOARD_DEPTH || newY < 0 || newY >= BOARD_HEIGHT || board[newX][newZ][newY] !== null) {
               valid = false;
               break;
             }
@@ -677,7 +641,6 @@
     let isFastDropping = false;
     const dropInterval = 1000;
     let lastDropTime = Date.now();
-
     function randomShape() {
       const keys = Object.keys(pieceShapes);
       const randomKey = keys[Math.floor(Math.random() * keys.length)];
@@ -718,11 +681,7 @@
         highScore = score;
         localStorage.setItem("highScore", highScore);
       }
-      if (highScore > 0) {
-        highScoreElement.textContent = "High Score: " + highScore;
-      } else {
-        highScoreElement.textContent = "";
-      }
+      highScoreElement.textContent = highScore > 0 ? "High Score: " + highScore : "";
     }
     function clearLayers() {
       let layersCleared = 0;
@@ -778,11 +737,7 @@
           const newX = piece.x + pos.x;
           const newZ = piece.z + pos.z;
           const newY = ghostY + pos.y - 1;
-          if (newY < 0) {
-            canDrop = false;
-            break;
-          }
-          if (board[newX][newZ][newY] !== null) {
+          if (newY < 0 || board[newX][newZ][newY] !== null) {
             canDrop = false;
             break;
           }
@@ -814,7 +769,7 @@
       dropStep();
     }
 
-    // Next piece preview
+    // --- Next piece preview ---
     const previewWidth = 150, previewHeight = 150;
     const previewContainer = document.getElementById('nextPieceContainer');
     const previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -842,9 +797,7 @@
       const materialMapping = { right: 0, left: 1, top: 2, bottom: 3, front: 4, back: 5 };
       let center = { x: 0, y: 0, z: 0 };
       for (let pos of nextPieceShape) {
-        center.x += pos.x;
-        center.y += pos.y;
-        center.z += pos.z;
+        center.x += pos.x; center.y += pos.y; center.z += pos.z;
       }
       center.x /= nextPieceShape.length;
       center.y /= nextPieceShape.length;
@@ -867,7 +820,7 @@
       previewGroup.add(group);
     }
 
-    // Controls
+    // --- Controls ---
     document.addEventListener('keydown', (event) => {
       if (!currentPiece || isPaused) return;
       switch (event.key) {
@@ -907,7 +860,7 @@
       }
     });
 
-    // Double-tap detection on mobile
+    // --- Touch events with debouncing ---
     let lastTapTime = 0;
     const doubleTapDelay = 300;
     let touchStartX = 0, touchStartY = 0;
@@ -923,11 +876,9 @@
         twoFingerStartX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
       }
     }, { passive: true });
-    // Debounced touchmove to reduce rapid calls
     document.addEventListener('touchmove', debounce((e) => {
       if (e.touches.length === 2) {
         e.preventDefault();
-        // Additional logic for two-finger move can go here
       }
     }, 50), { passive: false });
     document.addEventListener('touchend', (e) => {
@@ -1038,7 +989,7 @@
       document.getElementById('pauseIcon').textContent = isPaused ? '▶' : '||';
     });
 
-    // Main loop
+    // --- Main loop ---
     let lastTime = 0;
     function animate(time) {
       requestAnimationFrame(animate);
@@ -1046,7 +997,10 @@
       lastTime = time;
       currentCameraTheta = THREE.MathUtils.lerp(currentCameraTheta, targetCameraTheta, 0.1);
       updateCamera();
-      bgMaterial.uniforms.time.value += delta * 0.0005;
+      if (!isMobile && bgSphere) {
+        // Animate background only on non-mobile
+        bgSphere.material.uniforms.time.value += delta * 0.0005;
+      }
       if (!isPaused) {
         ghostGroup.clear();
         if (currentPiece) {
@@ -1078,7 +1032,7 @@
     }
     spawnPiece();
     animate(0);
-    // Throttled resize event handler
+    // --- Throttled resize handler ---
     window.addEventListener('resize', throttle(() => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
