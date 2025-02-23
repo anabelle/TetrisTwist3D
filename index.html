@@ -24,10 +24,6 @@
       color: white;
       font-family: sans-serif;
       user-select: none;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      -webkit-touch-callout: none;
       z-index: 10;
     }
 
@@ -207,33 +203,54 @@
       };
     }
 
+    // --- Global game variables ---
+    const BOARD_WIDTH = 8, BOARD_DEPTH = 8, BOARD_HEIGHT = 20;
+    let score = 0;
+    let isPaused = true;
+    let highScore = Number(localStorage.getItem("highScore")) || 0;
+    const highScoreElement = document.getElementById("highscore");
+    highScoreElement.textContent = highScore > 0 ? "High Score: " + highScore : "";
+    // Initialize board array
+    const board = [];
+    for (let x = 0; x < BOARD_WIDTH; x++) {
+      board[x] = [];
+      for (let z = 0; z < BOARD_DEPTH; z++) {
+        board[x][z] = new Array(BOARD_HEIGHT).fill(null);
+      }
+    }
+
     // --- Mobile detection and settings ---
     const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-    // On mobile, disable antialias and shadows, and reduce texture sizes
     const rendererParams = { antialias: !isMobile };
 
     // --- Audio setup ---
     let isMuted = true;
     let backgroundMusic;
     const dropSound = new Audio("videogame_tetris-drop.mp3");
-    dropSound.volume = 0.4;
-    dropSound.muted = isMuted;
+    dropSound.volume = 0.4; dropSound.muted = isMuted;
     const clearSound = new Audio("videogame_tetris-line.mp3");
-    clearSound.volume = 0.6;
-    clearSound.muted = isMuted;
+    clearSound.volume = 0.6; clearSound.muted = isMuted;
     const rotateSound = new Audio("videogame_tetris-rotate.mp3");
-    rotateSound.volume = 0.4;
-    rotateSound.muted = isMuted;
+    rotateSound.volume = 0.4; rotateSound.muted = isMuted;
     const gameOverSound = new Audio("videogame_tetris-gameover.mp3");
-    gameOverSound.volume = 0.6;
-    gameOverSound.muted = isMuted;
+    gameOverSound.volume = 0.6; gameOverSound.muted = isMuted;
     const pieceRotateSound = new Audio("videogame_tetris-piece-rotate.mp3");
-    pieceRotateSound.volume = 0.4;
-    pieceRotateSound.muted = isMuted;
+    pieceRotateSound.volume = 0.4; pieceRotateSound.muted = isMuted;
+
+    // Add mute/unmute toggle event listener
+    document.getElementById('muteIcon').addEventListener('click', () => {
+      isMuted = !isMuted;
+      backgroundMusic.setVolume(isMuted ? 0 : 0.5);
+      dropSound.muted = isMuted;
+      clearSound.muted = isMuted;
+      rotateSound.muted = isMuted;
+      gameOverSound.muted = isMuted;
+      pieceRotateSound.muted = isMuted;
+      document.getElementById('muteIcon').textContent = isMuted ? '🔇' : '🔊';
+    });
 
     // --- Scene, camera, and renderer ---
     const scene = new THREE.Scene();
-    const BOARD_WIDTH = 8, BOARD_DEPTH = 8, BOARD_HEIGHT = 20;
     const boardCenter = new THREE.Vector3(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, BOARD_DEPTH / 2);
     let targetCameraTheta = 0, currentCameraTheta = 0;
     const cameraRadius = 18;
@@ -246,75 +263,15 @@
     }
     updateCamera();
 
-    // Audio listener and background music load
-    const listener = new THREE.AudioListener();
-    camera.add(listener);
-    backgroundMusic = new THREE.Audio(listener);
-    const audioLoader = new THREE.AudioLoader();
-    audioLoader.load('arcade.mp3', function (buffer) {
-      backgroundMusic.setBuffer(buffer);
-      backgroundMusic.setLoop(true);
-      backgroundMusic.setVolume(isMuted ? 0 : 0.5);
-      document.addEventListener('click', () => {
-        if (!backgroundMusic.isPlaying) backgroundMusic.play();
-      }, { once: true });
-    });
-
-    // Create renderer (disable antialias on mobile)
+    // Limit device pixel ratio for performance
+    const pixelRatio = Math.min(window.devicePixelRatio, 2);
     const renderer = new THREE.WebGLRenderer(rendererParams);
+    renderer.setPixelRatio(pixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
-    // Disable shadows on mobile for performance
     renderer.shadowMap.enabled = !isMobile;
     document.body.appendChild(renderer.domElement);
 
-    // Handle lost/restored WebGL context
-    renderer.domElement.addEventListener('webglcontextlost', (event) => {
-      event.preventDefault();
-      console.warn('WebGL context lost');
-      isPaused = true;
-    }, false);
-    renderer.domElement.addEventListener('webglcontextrestored', () => {
-      console.log('WebGL context restored');
-      isPaused = false;
-      planeMaterial.map = createLargeFloorTexture();
-      planeMaterial.map.needsUpdate = true;
-      rubikColors.forEach((color, i) => {
-        const hexStr = '#' + color.toString(16).padStart(6, '0');
-        const newMap = createBlockTexture(hexStr);
-        FIXED_MATERIALS[i].map = newMap;
-        FIXED_MATERIALS[i].map.needsUpdate = true;
-      });
-      bgSphere.material.needsUpdate = true;
-    }, false);
-
-    // --- Audio mute toggle ---
-    document.getElementById('muteIcon').addEventListener('click', () => {
-      isMuted = !isMuted;
-      backgroundMusic.setVolume(isMuted ? 0 : 0.5);
-      dropSound.muted = isMuted;
-      clearSound.muted = isMuted;
-      rotateSound.muted = isMuted;
-      gameOverSound.muted = isMuted;
-      pieceRotateSound.muted = isMuted;
-      document.getElementById('muteIcon').textContent = isMuted ? '🔇' : '🔊';
-    });
-
-    // --- Board data ---
-    let score = 0;
-    let isPaused = true;
-    let highScore = Number(localStorage.getItem("highScore")) || 0;
-    const highScoreElement = document.getElementById("highscore");
-    highScoreElement.textContent = highScore > 0 ? "High Score: " + highScore : "";
-    const board = [];
-    for (let x = 0; x < BOARD_WIDTH; x++) {
-      board[x] = [];
-      for (let z = 0; z < BOARD_DEPTH; z++) {
-        board[x][z] = new Array(BOARD_HEIGHT).fill(null);
-      }
-    }
-
-    // --- Scene setup ---
-    // On mobile, use a static background color instead of an animated shader.
+    // --- Background setup ---
     let bgSphere;
     if (isMobile) {
       scene.background = new THREE.Color(0x111111);
@@ -352,13 +309,25 @@
       scene.add(bgSphere);
     }
 
+    // --- Audio listener and background music load ---
+    const listener = new THREE.AudioListener();
+    camera.add(listener);
+    backgroundMusic = new THREE.Audio(listener);
+    const audioLoader = new THREE.AudioLoader();
+    audioLoader.load('arcade.mp3', function (buffer) {
+      backgroundMusic.setBuffer(buffer);
+      backgroundMusic.setLoop(true);
+      backgroundMusic.setVolume(isMuted ? 0 : 0.5);
+      document.addEventListener('click', () => {
+        if (!backgroundMusic.isPlaying) backgroundMusic.play();
+      }, { once: true });
+    });
+
     // --- Floor texture creation ---
     function createLargeFloorTexture() {
-      // Use a smaller size on mobile
       const size = isMobile ? 512 : 1024;
       const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
+      canvas.width = size; canvas.height = size;
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = "#f0f0f0";
       ctx.fillRect(0, 0, size, size);
@@ -369,8 +338,7 @@
       const startY = Math.floor((0.5 - 0.05) * size);
       const endX = startX + regionSize;
       const endY = startY + regionSize;
-      ctx.strokeStyle = "#999999";
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#999999"; ctx.lineWidth = 2;
       for (let i = 0; i <= gridCells; i++) {
         let xPos = startX + i * cellSize;
         ctx.beginPath();
@@ -394,11 +362,7 @@
     }
     const floorTexture = createLargeFloorTexture();
     const planeGeometry = new THREE.PlaneGeometry(80, 80);
-    const planeMaterial = new THREE.MeshPhongMaterial({
-      map: floorTexture,
-      side: THREE.DoubleSide,
-      transparent: true
-    });
+    const planeMaterial = new THREE.MeshPhongMaterial({ map: floorTexture, side: THREE.DoubleSide, transparent: true });
     const plane = new THREE.Mesh(planeGeometry, planeMaterial);
     plane.rotation.x = -Math.PI / 2;
     plane.position.set(BOARD_WIDTH / 2, 0, BOARD_DEPTH / 2);
@@ -406,8 +370,7 @@
     scene.add(plane);
 
     // --- Lighting ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
-    scene.add(ambientLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.3));
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
     directionalLight.position.set(0, 50, 50);
     directionalLight.castShadow = !isMobile;
@@ -421,11 +384,12 @@
     directionalLight.shadow.camera.bottom = -50;
     scene.add(directionalLight);
 
-    // --- Board visualization ---
+    // --- Board and ghost groups ---
     const boardGroup = new THREE.Group();
     scene.add(boardGroup);
     const ghostGroup = new THREE.Group();
     scene.add(ghostGroup);
+
     const boardBox = new THREE.BoxGeometry(BOARD_WIDTH, BOARD_HEIGHT, BOARD_DEPTH);
     const edges = new THREE.EdgesGeometry(boardBox);
     const lineMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
@@ -435,11 +399,9 @@
 
     // --- Block textures ---
     function createBlockTexture(hexColor) {
-      // Use smaller size on mobile
       const size = isMobile ? 32 : 64;
       const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
+      canvas.width = size; canvas.height = size;
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = hexColor;
       ctx.fillRect(0, 0, size, size);
@@ -457,6 +419,21 @@
       return new THREE.MeshPhongMaterial({ map: createBlockTexture(hexStr) });
     });
 
+    // --- Pre-create shared ghost geometry and material ---
+    const ghostGeometry = new THREE.BoxGeometry(1, 1, 1);
+    const ghostMaterial = new THREE.MeshPhongMaterial({
+      color: 0xffffff,
+      opacity: 0.7,
+      transparent: true,
+      emissive: 0xffffff,
+      emissiveIntensity: 0.8
+    });
+    function createGhostCube(x, y, z) {
+      const cube = new THREE.Mesh(ghostGeometry, ghostMaterial);
+      cube.position.set(x + 0.5, y + 0.5, z + 0.5);
+      return cube;
+    }
+
     // --- Helper for rotating piece face mapping ---
     function updateMaterialMapping(oldMapping, axis) {
       const canonical = {
@@ -473,47 +450,11 @@
         let bestKey = null, bestDot = -Infinity;
         for (let key in canonical) {
           let dot = rotated.dot(canonical[key]);
-          if (dot > bestDot) {
-            bestDot = dot;
-            bestKey = key;
-          }
+          if (dot > bestDot) { bestDot = dot; bestKey = key; }
         }
         newMapping[bestKey] = oldMapping[face];
       }
       return newMapping;
-    }
-    function createGhostCube(x, y, z, size = 1) {
-      const material = new THREE.MeshPhongMaterial({
-        color: 0xffffff,
-        opacity: 0.7,
-        transparent: true,
-        emissive: 0xffffff,
-        emissiveIntensity: 0.8
-      });
-      const geometry = new THREE.BoxGeometry(size, size, size);
-      const cube = new THREE.Mesh(geometry, material);
-      cube.position.set(x + 0.5, y + 0.5, z + 0.5);
-      return cube;
-    }
-
-    // --- Piece shapes ---
-    const pieceShapes = {
-      I: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, { x: 2, y: 0, z: 0 }, { x: 3, y: 0, z: 0 }],
-      O: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 1, y: 1, z: 0 }],
-      T: [{ x: 1, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 1, y: 1, z: 0 }, { x: 2, y: 1, z: 0 }],
-      P: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }],
-      Cube: [
-        { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 },
-        { x: 0, y: 1, z: 0 }, { x: 1, y: 1, z: 0 },
-        { x: 0, y: 0, z: 1 }, { x: 1, y: 0, z: 1 },
-        { x: 0, y: 1, z: 1 }, { x: 1, y: 1, z: 1 }
-      ],
-      L: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 0, y: 2, z: 0 }, { x: 1, y: 2, z: 0 }]
-    };
-    function rotateVectorAroundAxis(v, axis) {
-      const vec = new THREE.Vector3(v.x, v.y, v.z);
-      vec.applyAxisAngle(axis, Math.PI / 2);
-      return { x: Math.round(vec.x), y: Math.round(vec.y), z: Math.round(vec.z) };
     }
     function createSharedMaterialCube(x, y, z, mapping) {
       const geometry = new THREE.BoxGeometry(1, 1, 1);
@@ -532,7 +473,25 @@
       return cube;
     }
 
-    // --- Piece class ---
+    // --- Piece shapes and class ---
+    const pieceShapes = {
+      I: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, { x: 2, y: 0, z: 0 }, { x: 3, y: 0, z: 0 }],
+      O: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 1, y: 1, z: 0 }],
+      T: [{ x: 1, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 1, y: 1, z: 0 }, { x: 2, y: 1, z: 0 }],
+      P: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }],
+      Cube: [
+        { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 },
+        { x: 0, y: 1, z: 0 }, { x: 1, y: 1, z: 0 },
+        { x: 0, y: 0, z: 1 }, { x: 1, y: 0, z: 1 },
+        { x: 0, y: 1, z: 1 }, { x: 1, y: 1, z: 1 }
+      ],
+      L: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 0, y: 2, z: 0 }, { x: 1, y: 2, z: 0 }]
+    };
+    function rotateVectorAroundAxis(v, axis) {
+      const vec = new THREE.Vector3(v.x, v.y, v.z);
+      vec.applyAxisAngle(axis, Math.PI / 2);
+      return { x: Math.round(vec.x), y: Math.round(vec.y), z: Math.round(vec.z) };
+    }
     class Piece {
       constructor(shape) {
         this.shape = shape.map(v => ({ ...v }));
@@ -546,7 +505,7 @@
         this.createBlocks();
       }
       createBlocks() {
-        while (this.group.children.length) {
+        while (this.group.children.length > 0) {
           this.group.remove(this.group.children[0]);
         }
         for (let pos of this.shape) {
@@ -578,9 +537,7 @@
       }
       move(dx, dy, dz) {
         if (this.canMove(dx, dy, dz)) {
-          this.x += dx;
-          this.y += dy;
-          this.z += dz;
+          this.x += dx; this.y += dy; this.z += dz;
           this.createBlocks();
           return true;
         }
@@ -607,15 +564,14 @@
             const newX = this.x + pos.x + offset.dx;
             const newY = this.y + pos.y + offset.dy;
             const newZ = this.z + pos.z + offset.dz;
-            if (newX < 0 || newX >= BOARD_WIDTH || newZ < 0 || newZ >= BOARD_DEPTH || newY < 0 || newY >= BOARD_HEIGHT || board[newX][newZ][newY] !== null) {
+            if (newX < 0 || newX >= BOARD_WIDTH || newZ < 0 || newZ >= BOARD_DEPTH ||
+              newY < 0 || newY >= BOARD_HEIGHT || board[newX][newZ][newY] !== null) {
               valid = false;
               break;
             }
           }
           if (valid) {
-            this.x += offset.dx;
-            this.y += offset.dy;
-            this.z += offset.dz;
+            this.x += offset.dx; this.y += offset.dy; this.z += offset.dz;
             this.shape = newShape;
             this.materialMapping = updateMaterialMapping(this.materialMapping, axis);
             this.createBlocks();
@@ -635,7 +591,6 @@
         scene.remove(this.group);
       }
     }
-
     let currentPiece = null;
     let nextPieceShape = randomShape();
     let isFastDropping = false;
@@ -657,14 +612,9 @@
       }
     }
     function resetGame() {
-      if (currentPiece) {
-        scene.remove(currentPiece.group);
-        currentPiece = null;
-      }
-      while (boardGroup.children.length) {
-        boardGroup.remove(boardGroup.children[0]);
-      }
-      ghostGroup.clear();
+      if (currentPiece) { scene.remove(currentPiece.group); currentPiece = null; }
+      while (boardGroup.children.length > 0) { boardGroup.remove(boardGroup.children[0]); }
+      while (ghostGroup.children.length > 0) { ghostGroup.remove(ghostGroup.children[0]); }
       for (let x = 0; x < BOARD_WIDTH; x++) {
         for (let z = 0; z < BOARD_DEPTH; z++) {
           board[x][z] = new Array(BOARD_HEIGHT).fill(null);
@@ -677,10 +627,7 @@
     }
     function updateScore() {
       document.getElementById('score').textContent = "Score: " + score;
-      if (score > highScore) {
-        highScore = score;
-        localStorage.setItem("highScore", highScore);
-      }
+      if (score > highScore) { highScore = score; localStorage.setItem("highScore", highScore); }
       highScoreElement.textContent = highScore > 0 ? "High Score: " + highScore : "";
     }
     function clearLayers() {
@@ -689,10 +636,7 @@
         let full = true;
         for (let x = 0; x < BOARD_WIDTH; x++) {
           for (let z = 0; z < BOARD_DEPTH; z++) {
-            if (board[x][z][y] === null) {
-              full = false;
-              break;
-            }
+            if (board[x][z][y] === null) { full = false; break; }
           }
           if (!full) break;
         }
@@ -735,8 +679,8 @@
         let canDrop = true;
         for (let pos of piece.shape) {
           const newX = piece.x + pos.x;
-          const newZ = piece.z + pos.z;
           const newY = ghostY + pos.y - 1;
+          const newZ = piece.z + pos.z;
           if (newY < 0 || board[newX][newZ][newY] !== null) {
             canDrop = false;
             break;
@@ -773,6 +717,7 @@
     const previewWidth = 150, previewHeight = 150;
     const previewContainer = document.getElementById('nextPieceContainer');
     const previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    previewRenderer.setPixelRatio(pixelRatio);
     previewRenderer.setSize(previewWidth, previewHeight);
     previewContainer.appendChild(previewRenderer.domElement);
     const previewScene = new THREE.Scene();
@@ -790,7 +735,7 @@
     let previewGroup = new THREE.Group();
     previewScene.add(previewGroup);
     function updateNextPiecePreview() {
-      while (previewGroup.children.length) {
+      while (previewGroup.children.length > 0) {
         previewGroup.remove(previewGroup.children[0]);
       }
       const group = new THREE.Group();
@@ -799,9 +744,7 @@
       for (let pos of nextPieceShape) {
         center.x += pos.x; center.y += pos.y; center.z += pos.z;
       }
-      center.x /= nextPieceShape.length;
-      center.y /= nextPieceShape.length;
-      center.z /= nextPieceShape.length;
+      center.x /= nextPieceShape.length; center.y /= nextPieceShape.length; center.z /= nextPieceShape.length;
       for (let pos of nextPieceShape) {
         const geometry = new THREE.BoxGeometry(1, 1, 1);
         const materialsForCube = [
@@ -850,17 +793,14 @@
         case ' ': {
           rotateSound.currentTime = 0;
           rotateSound.play();
-          if (event.shiftKey) {
-            targetCameraTheta -= Math.PI / 2;
-          } else {
-            targetCameraTheta += Math.PI / 2;
-          }
+          if (event.shiftKey) { targetCameraTheta -= Math.PI / 2; }
+          else { targetCameraTheta += Math.PI / 2; }
           break;
         }
       }
     });
 
-    // --- Touch events with debouncing ---
+    // --- Touch events ---
     let lastTapTime = 0;
     const doubleTapDelay = 300;
     let touchStartX = 0, touchStartY = 0;
@@ -877,9 +817,7 @@
       }
     }, { passive: true });
     document.addEventListener('touchmove', debounce((e) => {
-      if (e.touches.length === 2) {
-        e.preventDefault();
-      }
+      if (e.touches.length === 2) { e.preventDefault(); }
     }, 50), { passive: false });
     document.addEventListener('touchend', (e) => {
       if (!currentPiece || isPaused) return;
@@ -919,9 +857,8 @@
               const { dx, dz } = diffX > 0 ? getHorizontalMovementVector(-1) : getHorizontalMovementVector(1);
               currentPiece.move(dx, 0, dz);
             } else {
-              if (diffY > 0) {
-                currentPiece.rotateDiscrete(new THREE.Vector3(0, 1, 0));
-              } else {
+              if (diffY > 0) { currentPiece.rotateDiscrete(new THREE.Vector3(0, 1, 0)); }
+              else {
                 const right = new THREE.Vector3(-Math.sin(targetCameraTheta), 0, Math.cos(targetCameraTheta)).normalize();
                 currentPiece.rotateDiscrete(right);
               }
@@ -931,14 +868,8 @@
       }
     }, { passive: false });
     let mouseDownX = 0, mouseDownY = 0;
-    document.addEventListener('mousedown', (e) => {
-      mouseDownX = e.clientX;
-      mouseDownY = e.clientY;
-    });
-    document.addEventListener('dblclick', (e) => {
-      if (!currentPiece || isPaused) return;
-      animateFastDrop();
-    });
+    document.addEventListener('mousedown', (e) => { mouseDownX = e.clientX; mouseDownY = e.clientY; });
+    document.addEventListener('dblclick', (e) => { if (!currentPiece || isPaused) return; animateFastDrop(); });
     document.addEventListener('mouseup', (e) => {
       if (e.target !== renderer.domElement) return;
       if (!currentPiece || isPaused) return;
@@ -946,17 +877,11 @@
       const diffY = e.clientY - mouseDownY;
       const threshold = 30;
       if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
-        if (diffX > 0) {
-          const { dx, dz } = getHorizontalMovementVector(-1);
-          currentPiece.move(dx, 0, dz);
-        } else {
-          const { dx, dz } = getHorizontalMovementVector(1);
-          currentPiece.move(dx, 0, dz);
-        }
+        if (diffX > 0) { const { dx, dz } = getHorizontalMovementVector(-1); currentPiece.move(dx, 0, dz); }
+        else { const { dx, dz } = getHorizontalMovementVector(1); currentPiece.move(dx, 0, dz); }
       } else if (Math.abs(diffY) > threshold) {
-        if (diffY > 0) {
-          currentPiece.rotateDiscrete(new THREE.Vector3(0, 1, 0));
-        } else {
+        if (diffY > 0) { currentPiece.rotateDiscrete(new THREE.Vector3(0, 1, 0)); }
+        else {
           const right = new THREE.Vector3(-Math.sin(targetCameraTheta), 0, Math.cos(targetCameraTheta)).normalize();
           currentPiece.rotateDiscrete(right);
         }
@@ -970,20 +895,9 @@
     const helpPopup = document.getElementById('helpPopup');
     const helpIcon = document.getElementById('helpIcon');
     const closeHelp = document.getElementById('closeHelp');
-    helpIcon.addEventListener('click', () => {
-      helpPopup.style.display = 'block';
-      isPaused = true;
-    });
-    closeHelp.addEventListener('click', () => {
-      helpPopup.style.display = 'none';
-      isPaused = false;
-    });
-    window.addEventListener('click', (event) => {
-      if (event.target === helpPopup) {
-        helpPopup.style.display = 'none';
-        isPaused = false;
-      }
-    });
+    helpIcon.addEventListener('click', () => { helpPopup.style.display = 'block'; isPaused = true; });
+    closeHelp.addEventListener('click', () => { helpPopup.style.display = 'none'; isPaused = false; });
+    window.addEventListener('click', (event) => { if (event.target === helpPopup) { helpPopup.style.display = 'none'; isPaused = false; } });
     document.getElementById('pauseIcon').addEventListener('click', () => {
       isPaused = !isPaused;
       document.getElementById('pauseIcon').textContent = isPaused ? '▶' : '||';
@@ -997,12 +911,9 @@
       lastTime = time;
       currentCameraTheta = THREE.MathUtils.lerp(currentCameraTheta, targetCameraTheta, 0.1);
       updateCamera();
-      if (!isMobile && bgSphere) {
-        // Animate background only on non-mobile
-        bgSphere.material.uniforms.time.value += delta * 0.0005;
-      }
+      if (!isMobile && bgSphere) { bgSphere.material.uniforms.time.value += delta * 0.0005; }
       if (!isPaused) {
-        ghostGroup.clear();
+        while (ghostGroup.children.length > 0) { ghostGroup.remove(ghostGroup.children[0]); }
         if (currentPiece) {
           const ghostY = computeGhostY(currentPiece);
           for (let pos of currentPiece.shape) {
@@ -1014,6 +925,7 @@
         if (currentPiece && now - lastDropTime > dropInterval) {
           if (!currentPiece.move(0, -1, 0)) {
             currentPiece.fixToBoard();
+            dropSound.currentTime = 0;
             dropSound.play();
             score += currentPiece.shape.length;
             updateScore();
@@ -1032,7 +944,6 @@
     }
     spawnPiece();
     animate(0);
-    // --- Throttled resize handler ---
     window.addEventListener('resize', throttle(() => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
@@ -1041,10 +952,7 @@
       previewCamera.updateProjectionMatrix();
       previewRenderer.setSize(previewWidth, previewHeight);
     }, 100));
-    window.addEventListener('load', () => {
-      helpPopup.style.display = 'block';
-      isPaused = true;
-    });
+    window.addEventListener('load', () => { helpPopup.style.display = 'block'; isPaused = true; });
   </script>
 </body>
 
