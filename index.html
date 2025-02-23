@@ -165,7 +165,7 @@
         <li><strong>⬅️/➡️</strong>: Move piece left/right relative to camera.</li>
         <li><strong>⬆️</strong>: Rotate piece around X axis.</li>
         <li><strong>⬇️</strong>: Rotate piece around Y axis.</li>
-        <li><strong>⏎ / Tap</strong>: Fast drop piece.</li>
+        <li><strong>⏎ / Double Tap / Double Click</strong>: Fast drop piece.</li>
         <li><strong>[space]</strong>: Rotate camera 90° (keyboard).</li>
         <li><strong>🔄</strong>: Rotate camera 90°.</li>
       </ul>
@@ -215,6 +215,7 @@
     let targetCameraTheta = 0, currentCameraTheta = 0;
     const cameraRadius = 18;
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
     function updateCamera() {
       camera.position.x = boardCenter.x + cameraRadius * Math.cos(currentCameraTheta);
       camera.position.y = boardCenter.y + 10;
@@ -222,6 +223,7 @@
       camera.lookAt(boardCenter);
     }
     updateCamera();
+
     // Attach an audio listener to the camera and create the THREE.Audio for background music
     const listener = new THREE.AudioListener();
     camera.add(listener);
@@ -321,6 +323,7 @@
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = "#f0f0f0";
       ctx.fillRect(0, 0, size, size);
+
       const gridCells = BOARD_WIDTH;
       const regionSize = 0.1 * size;
       const cellSize = regionSize / gridCells;
@@ -328,6 +331,7 @@
       const startY = Math.floor((0.5 - 0.05) * size);
       const endX = startX + regionSize;
       const endY = startY + regionSize;
+
       ctx.strokeStyle = "#999999";
       ctx.lineWidth = 2;
       for (let i = 0; i <= gridCells; i++) {
@@ -336,12 +340,14 @@
         ctx.moveTo(xPos, startY);
         ctx.lineTo(xPos, endY);
         ctx.stroke();
+
         let yPos = startY + i * cellSize;
         ctx.beginPath();
         ctx.moveTo(startX, yPos);
         ctx.lineTo(endX, yPos);
         ctx.stroke();
       }
+
       const gradient = ctx.createRadialGradient(
         size / 2, size / 2, size * 0.4,
         size / 2, size / 2, size * 0.55
@@ -352,6 +358,7 @@
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, size, size);
       ctx.globalCompositeOperation = "source-over";
+
       return new THREE.CanvasTexture(canvas);
     }
     const floorTexture = createLargeFloorTexture();
@@ -388,6 +395,7 @@
     scene.add(boardGroup);
     const ghostGroup = new THREE.Group();
     scene.add(ghostGroup);
+
     const boardBox = new THREE.BoxGeometry(BOARD_WIDTH, BOARD_HEIGHT, BOARD_DEPTH);
     const edges = new THREE.EdgesGeometry(boardBox);
     const lineMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
@@ -402,11 +410,14 @@
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext('2d');
+
       ctx.fillStyle = hexColor;
       ctx.fillRect(0, 0, size, size);
+
       ctx.strokeStyle = "#000000";
       ctx.lineWidth = 8;
       ctx.strokeRect(0, 0, size, size);
+
       const texture = new THREE.CanvasTexture(canvas);
       texture.magFilter = THREE.NearestFilter;
       texture.minFilter = THREE.NearestFilter;
@@ -572,18 +583,25 @@
             let newX = this.x + pos.x + offset.dx;
             let newY = this.y + pos.y + offset.dy;
             let newZ = this.z + pos.z + offset.dz;
-            if (newX < 0 || newX >= BOARD_WIDTH || newZ < 0 || newZ >= BOARD_DEPTH || newY < 0 || newY >= BOARD_HEIGHT) { valid = false; break; }
-            if (board[newX][newZ][newY] !== null) { valid = false; break; }
+            if (
+              newX < 0 || newX >= BOARD_WIDTH ||
+              newZ < 0 || newZ >= BOARD_DEPTH ||
+              newY < 0 || newY >= BOARD_HEIGHT ||
+              board[newX][newZ][newY] !== null
+            ) {
+              valid = false;
+              break;
+            }
           }
-          if (valid) { validOffset = offset; break; }
-        }
-        if (validOffset !== null) {
-          this.x += validOffset.dx;
-          this.y += validOffset.dy;
-          this.z += validOffset.dz;
-          this.shape = newShape;
-          this.materialMapping = updateMaterialMapping(this.materialMapping, axis);
-          this.createBlocks();
+          if (valid) {
+            this.x += offset.dx;
+            this.y += offset.dy;
+            this.z += offset.dz;
+            this.shape = newShape;
+            this.materialMapping = updateMaterialMapping(this.materialMapping, axis);
+            this.createBlocks();
+            break;
+          }
         }
       }
       fixToBoard() {
@@ -610,6 +628,8 @@
       currentPiece = new Piece(nextPieceShape);
       nextPieceShape = randomShape();
       updateNextPiecePreview();
+
+      // If the new piece cannot move at all, game is over
       if (!currentPiece.canMove(0, 0, 0)) {
         gameOverSound.play();
         alert("Game Over, Try again.");
@@ -625,6 +645,7 @@
         boardGroup.remove(boardGroup.children[0]);
       }
       ghostGroup.clear();
+
       for (let x = 0; x < BOARD_WIDTH; x++) {
         for (let z = 0; z < BOARD_DEPTH; z++) {
           board[x][z] = new Array(BOARD_HEIGHT).fill(null);
@@ -653,7 +674,10 @@
         let full = true;
         for (let x = 0; x < BOARD_WIDTH; x++) {
           for (let z = 0; z < BOARD_DEPTH; z++) {
-            if (board[x][z][y] === null) { full = false; break; }
+            if (board[x][z][y] === null) {
+              full = false;
+              break;
+            }
           }
           if (!full) break;
         }
@@ -696,8 +720,14 @@
         let canDrop = true;
         for (let pos of piece.shape) {
           const newX = piece.x + pos.x, newZ = piece.z + pos.z, newY = ghostY + pos.y - 1;
-          if (newY < 0) { canDrop = false; break; }
-          if (newY < BOARD_HEIGHT && board[newX][newZ][newY] !== null) { canDrop = false; break; }
+          if (newY < 0) {
+            canDrop = false;
+            break;
+          }
+          if (newY < BOARD_HEIGHT && board[newX][newZ][newY] !== null) {
+            canDrop = false;
+            break;
+          }
         }
         if (canDrop) ghostY -= 1; else break;
       }
@@ -705,36 +735,10 @@
     }
 
     let isFastDropping = false;
-
-    // Disable fast drop triggers by removing or ignoring the event handlers
-    function disableFastDropInputs() {
-      // Example: remove event listeners or set a flag that all handlers check
-      document.removeEventListener('touchend', onFastDropEvent);
-      document.removeEventListener('mouseup', onFastDropEvent);
-      document.removeEventListener('keydown', onFastDropEvent);
-    }
-
-    function enableFastDropInputs() {
-      document.addEventListener('touchend', onFastDropEvent);
-      document.addEventListener('mouseup', onFastDropEvent);
-      document.addEventListener('keydown', onFastDropEvent);
-    }
-
-    function onFastDropEvent(event) {
-      animateFastDrop();
-    }
-
     function animateFastDrop() {
-      if (event.target.closest('.popup') || event.target.closest('.rotate-button')) {
-        return;
-      }
-
       // Prevent running if there's no current piece or if already fast dropping
       if (!currentPiece || isFastDropping) return;
       isFastDropping = true;
-
-      // Disable further fast drop events until drop completes
-      disableFastDropInputs();
 
       // Use requestAnimationFrame for a smoother, more controlled drop loop
       function dropStep() {
@@ -753,17 +757,11 @@
             spawnPiece();
             lastDropTime = Date.now();
           }
-          // Re-enable fast drop triggers and unlock the flag
           isFastDropping = false;
-          enableFastDropInputs();
         }
       }
-
       dropStep();
     }
-
-    // Initially add the event listeners for fast drop triggers
-    enableFastDropInputs();
 
     // Next piece preview
     const previewWidth = 150, previewHeight = 150;
@@ -771,6 +769,7 @@
     const previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     previewRenderer.setSize(previewWidth, previewHeight);
     previewContainer.appendChild(previewRenderer.domElement);
+
     const previewScene = new THREE.Scene();
     previewScene.background = new THREE.Color(0x222222);
     const previewCamera = new THREE.PerspectiveCamera(75, previewWidth / previewHeight, 0.1, 1000);
@@ -778,24 +777,32 @@
     const previewCameraRadius = 3;
     previewCamera.position.set(previewCameraRadius, previewCameraRadius, previewCameraRadius);
     previewCamera.lookAt(new THREE.Vector3(0, 0, 0));
+
     const previewAmbient = new THREE.AmbientLight(0xffffff, 1);
     previewScene.add(previewAmbient);
     const previewDirectional = new THREE.DirectionalLight(0xffffff, 0.8);
     previewDirectional.position.set(2, 2, 2);
     previewScene.add(previewDirectional);
+
     let previewGroup = new THREE.Group();
     previewScene.add(previewGroup);
+
     function updateNextPiecePreview() {
-      while (previewGroup.children.length) { previewGroup.remove(previewGroup.children[0]); }
+      while (previewGroup.children.length) {
+        previewGroup.remove(previewGroup.children[0]);
+      }
       const materialMapping = { right: 0, left: 1, top: 2, bottom: 3, front: 4, back: 5 };
       const group = new THREE.Group();
       let center = { x: 0, y: 0, z: 0 };
       for (let pos of nextPieceShape) {
-        center.x += pos.x; center.y += pos.y; center.z += pos.z;
+        center.x += pos.x;
+        center.y += pos.y;
+        center.z += pos.z;
       }
       center.x /= nextPieceShape.length;
       center.y /= nextPieceShape.length;
       center.z /= nextPieceShape.length;
+
       for (let pos of nextPieceShape) {
         const geometry = new THREE.BoxGeometry(1, 1, 1);
         const materialsForCube = [
@@ -838,26 +845,31 @@
           break;
         }
         case 'Enter':
+          // Keyboard "Enter" triggers fast drop
           animateFastDrop();
           break;
         case ' ':
+          // Space rotates camera
+          rotateSound.currentTime = 0;
+          rotateSound.play();
           if (event.shiftKey) {
-            rotateSound.currentTime = 0;
-            rotateSound.play();
             targetCameraTheta -= Math.PI / 2;
           } else {
-            rotateSound.currentTime = 0;
-            rotateSound.play();
             targetCameraTheta += Math.PI / 2;
           }
           break;
       }
     });
 
+    // Detect double tap on mobile for fast drop
+    let lastTapTime = 0;
+    const doubleTapDelay = 300; // ms
+
     // Touch controls
     let touchStartX = 0, touchStartY = 0;
     let twoFingerGesture = false, twoFingerStartX = 0;
     const swipeThreshold = 50;
+
     document.addEventListener('touchstart', (e) => {
       if (e.touches.length === 1) {
         touchStartX = e.touches[0].clientX;
@@ -868,14 +880,20 @@
         twoFingerStartX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
       }
     }, { passive: false });
+
     document.addEventListener('touchmove', (e) => {
       if (e.touches.length === 2) {
         e.preventDefault();
       }
     }, { passive: false });
+
     document.addEventListener('touchend', (e) => {
+      if (!currentPiece || isPaused) return;
+
       if (twoFingerGesture) {
+        // Two-finger gesture is for camera rotation
         if (e.touches.length === 0) {
+          // End of gesture
           let endX = 0;
           if (e.changedTouches.length > 0) {
             let sum = 0;
@@ -886,30 +904,49 @@
           }
           const deltaX = endX - twoFingerStartX;
           if (Math.abs(deltaX) >= swipeThreshold) {
+            rotateSound.currentTime = 0;
+            rotateSound.play();
             targetCameraTheta += (deltaX > 0 ? Math.PI / 2 : -Math.PI / 2);
           }
         }
         twoFingerGesture = false;
         return;
       }
+
+      // Single-finger release
       if (e.touches.length === 0 && e.changedTouches.length === 1) {
         const touchEndX = e.changedTouches[0].clientX;
         const touchEndY = e.changedTouches[0].clientY;
         const diffX = touchEndX - touchStartX;
         const diffY = touchEndY - touchStartY;
-        const threshold = 50; // increased threshold to prevent swipes triggering fast drop
-        if (Math.abs(diffX) < threshold && Math.abs(diffY) < threshold) {
+
+        // Check if it's a double tap
+        const now = Date.now();
+        if (now - lastTapTime < doubleTapDelay) {
+          // Double tap => fast drop
           animateFastDrop();
-        } else if (Math.abs(diffX) > Math.abs(diffY)) {
-          const { dx, dz } = diffX > 0 ? getHorizontalMovementVector(-1) : getHorizontalMovementVector(1);
-          currentPiece.move(dx, 0, dz);
+          lastTapTime = 0;  // reset
         } else {
-          if (diffY > 0) {
-            currentPiece.rotateDiscrete(new THREE.Vector3(0, 1, 0));
-          } else {
-            const right = new THREE.Vector3(-Math.sin(targetCameraTheta), 0, Math.cos(targetCameraTheta)).normalize();
-            currentPiece.rotateDiscrete(right);
+          // Possibly a swipe or just a single tap
+          lastTapTime = now;
+
+          // If the user moved enough, interpret as swipe
+          if (Math.abs(diffX) > swipeThreshold || Math.abs(diffY) > swipeThreshold) {
+            // Horizontal vs. vertical
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+              const { dx, dz } = diffX > 0 ? getHorizontalMovementVector(-1) : getHorizontalMovementVector(1);
+              currentPiece.move(dx, 0, dz);
+            } else {
+              if (diffY > 0) {
+                currentPiece.rotateDiscrete(new THREE.Vector3(0, 1, 0));
+              } else {
+                const right = new THREE.Vector3(-Math.sin(targetCameraTheta), 0, Math.cos(targetCameraTheta)).normalize();
+                currentPiece.rotateDiscrete(right);
+              }
+            }
           }
+          // If it's a single short tap (no big movement) and not double tap,
+          // do nothing special.
         }
       }
     }, { passive: false });
@@ -920,17 +957,25 @@
       mouseDownX = e.clientX;
       mouseDownY = e.clientY;
     });
+
+    // Instead of single-click for fast drop, we use a double-click event
+    document.addEventListener('dblclick', (e) => {
+      if (!currentPiece || isPaused) return;
+      // Make sure the click was on the canvas or background
+      animateFastDrop();
+    });
+
     document.addEventListener('mouseup', (e) => {
+      // We now only interpret mouse drag as movement/rotation
       if (e.target !== renderer.domElement) return;
       if (!currentPiece || isPaused) return;
+
       const diffX = e.clientX - mouseDownX;
       const diffY = e.clientY - mouseDownY;
       const threshold = 30;
-      if (Math.abs(diffX) < threshold && Math.abs(diffY) < threshold) {
-        animateFastDrop();
-        return;
-      }
-      if (Math.abs(diffX) > Math.abs(diffY)) {
+
+      // If the user moves beyond threshold, treat as a move or rotate
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
         if (diffX > 0) {
           const { dx, dz } = getHorizontalMovementVector(-1);
           currentPiece.move(dx, 0, dz);
@@ -938,7 +983,7 @@
           const { dx, dz } = getHorizontalMovementVector(1);
           currentPiece.move(dx, 0, dz);
         }
-      } else {
+      } else if (Math.abs(diffY) > threshold) {
         if (diffY > 0) {
           currentPiece.rotateDiscrete(new THREE.Vector3(0, 1, 0));
         } else {
@@ -959,6 +1004,7 @@
     const helpPopup = document.getElementById('helpPopup');
     const helpIcon = document.getElementById('helpIcon');
     const closeHelp = document.getElementById('closeHelp');
+
     helpIcon.addEventListener('click', () => {
       helpPopup.style.display = 'block';
       isPaused = true;
@@ -984,9 +1030,12 @@
       requestAnimationFrame(animate);
       const delta = time - lastTime;
       lastTime = time;
+
       currentCameraTheta = THREE.MathUtils.lerp(currentCameraTheta, targetCameraTheta, 0.1);
       updateCamera();
+
       bgMaterial.uniforms.time.value += delta * 0.0005;
+
       if (!isPaused) {
         ghostGroup.clear();
         if (currentPiece) {
@@ -1009,23 +1058,31 @@
           lastDropTime = now;
         }
       }
+
+      // Rotate the preview camera
       previewCameraAngle += 0.01;
       previewCamera.position.x = previewCameraRadius * Math.cos(previewCameraAngle);
       previewCamera.position.z = previewCameraRadius * Math.sin(previewCameraAngle);
       previewCamera.lookAt(new THREE.Vector3(0, 0, 0));
       previewRenderer.render(previewScene, previewCamera);
+
       renderer.render(scene, camera);
     }
+
     spawnPiece();
     animate(0);
+
+    // Resize handling
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+
       previewCamera.aspect = previewWidth / previewHeight;
       previewCamera.updateProjectionMatrix();
       previewRenderer.setSize(previewWidth, previewHeight);
     });
+
     window.addEventListener('load', () => {
       helpPopup.style.display = 'block';
       isPaused = true;
