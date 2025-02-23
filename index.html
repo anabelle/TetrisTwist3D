@@ -243,6 +243,21 @@
       dropInterval: 1000,
       clearMode: 'layer'
     };
+    // Load saved game options from localStorage if available
+    const savedOptions = localStorage.getItem("gameOptions");
+    if (savedOptions) {
+      gameOptions = JSON.parse(savedOptions);
+    }
+
+    // --- Update options panel UI to reflect current settings ---
+    const speedSelect = document.getElementById('speedSelect');
+    const speedValue = document.getElementById('speedValue');
+    speedSelect.value = gameOptions.dropInterval;
+    speedValue.textContent = gameOptions.dropInterval;
+    const radios = document.getElementsByName('clearMode');
+    radios.forEach(radio => {
+      radio.checked = (radio.value === gameOptions.clearMode);
+    });
 
     // Initialize board array
     const board = [];
@@ -283,18 +298,33 @@
       document.getElementById('muteIcon').textContent = isMuted ? '🔇' : '🔊';
     });
 
-    // Pause/Play toggle
+    // Pause/Play toggle with muting on pause
     document.getElementById('pauseIcon').addEventListener('click', () => {
       isPaused = !isPaused;
       document.getElementById('pauseIcon').textContent = isPaused ? '►' : '||';
+      if (isPaused) {
+        // Mute sounds when paused
+        backgroundMusic.setVolume(0);
+        dropSound.muted = true;
+        clearSound.muted = true;
+        rotateSound.muted = true;
+        gameOverSound.muted = true;
+        pieceRotateSound.muted = true;
+      } else {
+        // Restore sounds based on user mute preference
+        backgroundMusic.setVolume(isMuted ? 0 : 0.5);
+        dropSound.muted = isMuted;
+        clearSound.muted = isMuted;
+        rotateSound.muted = isMuted;
+        gameOverSound.muted = isMuted;
+        pieceRotateSound.muted = isMuted;
+      }
     });
 
     // --- Options modal event listeners ---
     const optionsPopup = document.getElementById('optionsPopup');
     const optionsIcon = document.getElementById('optionsIcon');
     const closeOptions = document.getElementById('closeOptions');
-    const speedSelect = document.getElementById('speedSelect');
-    const speedValue = document.getElementById('speedValue');
     optionsIcon.addEventListener('click', () => {
       optionsPopup.style.display = 'block';
       isPaused = true;
@@ -311,6 +341,8 @@
           gameOptions.clearMode = radio.value;
         }
       });
+      // Save current settings to localStorage
+      localStorage.setItem("gameOptions", JSON.stringify(gameOptions));
       isPaused = false;
       document.getElementById('pauseIcon').textContent = '||';
     });
