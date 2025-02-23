@@ -186,28 +186,51 @@
   <script type="module">
     import * as THREE from './three.module.js';
 
+    // Utility functions for debouncing and throttling
+    function debounce(func, wait, immediate) {
+      let timeout;
+      return function (...args) {
+        const context = this;
+        const later = function () {
+          timeout = null;
+          if (!immediate) func.apply(context, args);
+        };
+        const callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
+      };
+    }
+
+    function throttle(func, limit) {
+      let inThrottle;
+      return function (...args) {
+        const context = this;
+        if (!inThrottle) {
+          func.apply(context, args);
+          inThrottle = true;
+          setTimeout(() => inThrottle = false, limit);
+        }
+      };
+    }
+
     // -----------------------
     // Audio: Load background music asynchronously using THREE.AudioLoader
     // -----------------------
     let isMuted = true;
-
     let backgroundMusic; // Will be assigned later
     const dropSound = new Audio("videogame_tetris-drop.mp3");
     dropSound.volume = 0.4;
     dropSound.muted = isMuted;
-
     const clearSound = new Audio("videogame_tetris-line.mp3");
     clearSound.volume = 0.6;
     clearSound.muted = isMuted;
-
     const rotateSound = new Audio("videogame_tetris-rotate.mp3");
     rotateSound.volume = 0.4;
     rotateSound.muted = isMuted;
-
     const gameOverSound = new Audio("videogame_tetris-gameover.mp3");
     gameOverSound.volume = 0.6;
     gameOverSound.muted = isMuted;
-
     const pieceRotateSound = new Audio("videogame_tetris-piece-rotate.mp3");
     pieceRotateSound.volume = 0.4;
     pieceRotateSound.muted = isMuted;
@@ -221,7 +244,6 @@
     let targetCameraTheta = 0, currentCameraTheta = 0;
     const cameraRadius = 18;
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-
     function updateCamera() {
       camera.position.x = boardCenter.x + cameraRadius * Math.cos(currentCameraTheta);
       camera.position.y = boardCenter.y + 10;
@@ -255,25 +277,17 @@
       console.warn('WebGL context lost');
       isPaused = true;
     }, false);
-
     renderer.domElement.addEventListener('webglcontextrestored', () => {
       console.log('WebGL context restored');
-      // Re-upload textures, then unpause
       isPaused = false;
-
-      // Rebuild floor texture
       planeMaterial.map = createLargeFloorTexture();
       planeMaterial.map.needsUpdate = true;
-
-      // Rebuild block textures
       rubikColors.forEach((color, i) => {
         const hexStr = '#' + color.toString(16).padStart(6, '0');
         const newMap = createBlockTexture(hexStr);
         FIXED_MATERIALS[i].map = newMap;
         FIXED_MATERIALS[i].map.needsUpdate = true;
       });
-
-      // Mark background material as updated
       bgSphere.material.needsUpdate = true;
     }, false);
 
@@ -303,7 +317,6 @@
     } else {
       highScoreElement.textContent = "";
     }
-
     const board = [];
     for (let x = 0; x < BOARD_WIDTH; x++) {
       board[x] = [];
@@ -315,7 +328,6 @@
     // -----------------------
     // Scene setup
     // -----------------------
-    // Background sphere (animated)
     const bgGeometry = new THREE.SphereGeometry(500, 32, 32);
     const bgMaterial = new THREE.ShaderMaterial({
       uniforms: { time: { value: 0.0 } },
@@ -348,17 +360,15 @@
     const bgSphere = new THREE.Mesh(bgGeometry, bgMaterial);
     scene.add(bgSphere);
 
-    // Floor
+    // Floor texture creation function
     function createLargeFloorTexture() {
       const size = 1024;
       const canvas = document.createElement('canvas');
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext('2d');
-
       ctx.fillStyle = "#f0f0f0";
       ctx.fillRect(0, 0, size, size);
-
       const gridCells = BOARD_WIDTH;
       const regionSize = 0.1 * size;
       const cellSize = regionSize / gridCells;
@@ -366,7 +376,6 @@
       const startY = Math.floor((0.5 - 0.05) * size);
       const endX = startX + regionSize;
       const endY = startY + regionSize;
-
       ctx.strokeStyle = "#999999";
       ctx.lineWidth = 2;
       for (let i = 0; i <= gridCells; i++) {
@@ -375,15 +384,12 @@
         ctx.moveTo(xPos, startY);
         ctx.lineTo(xPos, endY);
         ctx.stroke();
-
         let yPos = startY + i * cellSize;
         ctx.beginPath();
         ctx.moveTo(startX, yPos);
         ctx.lineTo(endX, yPos);
         ctx.stroke();
       }
-
-      // Radial fade
       const gradient = ctx.createRadialGradient(
         size / 2, size / 2, size * 0.4,
         size / 2, size / 2, size * 0.55
@@ -394,7 +400,6 @@
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, size, size);
       ctx.globalCompositeOperation = "source-over";
-
       return new THREE.CanvasTexture(canvas);
     }
 
@@ -414,7 +419,6 @@
     // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
     scene.add(ambientLight);
-
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
     directionalLight.position.set(0, 50, 50);
     directionalLight.castShadow = true;
@@ -428,12 +432,11 @@
     directionalLight.shadow.camera.bottom = -50;
     scene.add(directionalLight);
 
-    // Board visualization
+    // Board visualization groups
     const boardGroup = new THREE.Group();
     scene.add(boardGroup);
     const ghostGroup = new THREE.Group();
     scene.add(ghostGroup);
-
     const boardBox = new THREE.BoxGeometry(BOARD_WIDTH, BOARD_HEIGHT, BOARD_DEPTH);
     const edges = new THREE.EdgesGeometry(boardBox);
     const lineMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
@@ -448,21 +451,16 @@
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext('2d');
-
       ctx.fillStyle = hexColor;
       ctx.fillRect(0, 0, size, size);
-
       ctx.strokeStyle = "#000000";
       ctx.lineWidth = 8;
       ctx.strokeRect(0, 0, size, size);
-
       const texture = new THREE.CanvasTexture(canvas);
       texture.magFilter = THREE.NearestFilter;
       texture.minFilter = THREE.NearestFilter;
       return texture;
     }
-
-    // For each rubik color, we create exactly one material. All cubes share these references.
     const rubikColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xffa500, 0xffffff];
     const FIXED_MATERIALS = rubikColors.map(color => {
       const hexStr = '#' + color.toString(16).padStart(6, '0');
@@ -542,7 +540,6 @@
     // Create a single cube with the 6 materials from FIXED_MATERIALS
     function createSharedMaterialCube(x, y, z, mapping) {
       const geometry = new THREE.BoxGeometry(1, 1, 1);
-      // Instead of .clone(), we reference them directly:
       const materialsForCube = [
         FIXED_MATERIALS[mapping.right],
         FIXED_MATERIALS[mapping.left],
@@ -624,7 +621,6 @@
         pieceRotateSound.currentTime = 0;
         pieceRotateSound.play();
         const newShape = this.shape.map(v => rotateVectorAroundAxis(v, axis));
-        // We'll test offsets to see if the piece can fit after rotation
         const offsets = [
           { dx: 0, dy: 0, dz: 0 },
           { dx: 1, dy: 0, dz: 0 },
@@ -664,12 +660,10 @@
         }
       }
       fixToBoard() {
-        // Once a piece can no longer move, we fix each cube to the board
         for (let pos of this.shape) {
           const bx = this.x + pos.x;
           const by = this.y + pos.y;
           const bz = this.z + pos.z;
-          // Reuse the shared-material approach
           const cube = createSharedMaterialCube(bx, by, bz, this.materialMapping);
           boardGroup.add(cube);
           board[bx][bz][by] = cube;
@@ -745,14 +739,12 @@
         }
         if (full) {
           layersCleared++;
-          // remove that entire layer
           for (let x = 0; x < BOARD_WIDTH; x++) {
             for (let z = 0; z < BOARD_DEPTH; z++) {
               boardGroup.remove(board[x][z][y]);
               board[x][z][y] = null;
             }
           }
-          // shift everything above down
           for (let ty = y + 1; ty < BOARD_HEIGHT; ty++) {
             for (let x = 0; x < BOARD_WIDTH; x++) {
               for (let z = 0; z < BOARD_DEPTH; z++) {
@@ -773,7 +765,6 @@
         clearSound.play();
       }
     }
-
     function getHorizontalMovementVector(direction) {
       const dx = direction === -1 ? Math.sin(currentCameraTheta) : -Math.sin(currentCameraTheta);
       const dz = direction === -1 ? -Math.cos(currentCameraTheta) : Math.cos(currentCameraTheta);
@@ -800,7 +791,6 @@
       }
       return ghostY;
     }
-
     function animateFastDrop() {
       if (!currentPiece || isFastDropping) return;
       isFastDropping = true;
@@ -830,7 +820,6 @@
     const previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     previewRenderer.setSize(previewWidth, previewHeight);
     previewContainer.appendChild(previewRenderer.domElement);
-
     const previewScene = new THREE.Scene();
     previewScene.background = new THREE.Color(0x222222);
     const previewCamera = new THREE.PerspectiveCamera(75, previewWidth / previewHeight, 0.1, 1000);
@@ -838,22 +827,17 @@
     const previewCameraRadius = 3;
     previewCamera.position.set(previewCameraRadius, previewCameraRadius, previewCameraRadius);
     previewCamera.lookAt(new THREE.Vector3(0, 0, 0));
-
     const previewAmbient = new THREE.AmbientLight(0xffffff, 1);
     previewScene.add(previewAmbient);
     const previewDirectional = new THREE.DirectionalLight(0xffffff, 0.8);
     previewDirectional.position.set(2, 2, 2);
     previewScene.add(previewDirectional);
-
     let previewGroup = new THREE.Group();
     previewScene.add(previewGroup);
-
     function updateNextPiecePreview() {
-      // Clear old preview
       while (previewGroup.children.length) {
         previewGroup.remove(previewGroup.children[0]);
       }
-      // Build new piece
       const group = new THREE.Group();
       const materialMapping = { right: 0, left: 1, top: 2, bottom: 3, front: 4, back: 5 };
       let center = { x: 0, y: 0, z: 0 };
@@ -865,10 +849,8 @@
       center.x /= nextPieceShape.length;
       center.y /= nextPieceShape.length;
       center.z /= nextPieceShape.length;
-
       for (let pos of nextPieceShape) {
         const geometry = new THREE.BoxGeometry(1, 1, 1);
-        // Again, no .clone(): we share the same six materials
         const materialsForCube = [
           FIXED_MATERIALS[materialMapping.right],
           FIXED_MATERIALS[materialMapping.left],
@@ -889,33 +871,30 @@
     document.addEventListener('keydown', (event) => {
       if (!currentPiece || isPaused) return;
       switch (event.key) {
-        case 'ArrowRight':
-          {
-            const { dx, dz } = getHorizontalMovementVector(-1);
-            currentPiece.move(dx, 0, dz);
-            break;
-          }
-        case 'ArrowLeft':
-          {
-            const { dx, dz } = getHorizontalMovementVector(1);
-            currentPiece.move(dx, 0, dz);
-            break;
-          }
-        case 'ArrowUp':
-          {
-            const right = new THREE.Vector3(-Math.sin(targetCameraTheta), 0, Math.cos(targetCameraTheta)).normalize();
-            currentPiece.rotateDiscrete(right);
-            break;
-          }
-        case 'ArrowDown':
-          {
-            currentPiece.rotateDiscrete(new THREE.Vector3(0, 1, 0));
-            break;
-          }
-        case 'Enter':
+        case 'ArrowRight': {
+          const { dx, dz } = getHorizontalMovementVector(-1);
+          currentPiece.move(dx, 0, dz);
+          break;
+        }
+        case 'ArrowLeft': {
+          const { dx, dz } = getHorizontalMovementVector(1);
+          currentPiece.move(dx, 0, dz);
+          break;
+        }
+        case 'ArrowUp': {
+          const right = new THREE.Vector3(-Math.sin(targetCameraTheta), 0, Math.cos(targetCameraTheta)).normalize();
+          currentPiece.rotateDiscrete(right);
+          break;
+        }
+        case 'ArrowDown': {
+          currentPiece.rotateDiscrete(new THREE.Vector3(0, 1, 0));
+          break;
+        }
+        case 'Enter': {
           animateFastDrop();
           break;
-        case ' ':
+        }
+        case ' ': {
           rotateSound.currentTime = 0;
           rotateSound.play();
           if (event.shiftKey) {
@@ -924,17 +903,16 @@
             targetCameraTheta += Math.PI / 2;
           }
           break;
+        }
       }
     });
 
     // Double-tap detection on mobile
     let lastTapTime = 0;
     const doubleTapDelay = 300;
-
     let touchStartX = 0, touchStartY = 0;
     let twoFingerGesture = false, twoFingerStartX = 0;
     const swipeThreshold = 50;
-
     document.addEventListener('touchstart', (e) => {
       if (e.touches.length === 1) {
         touchStartX = e.touches[0].clientX;
@@ -944,14 +922,14 @@
         twoFingerGesture = true;
         twoFingerStartX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
       }
-    }, { passive: false });
-
-    document.addEventListener('touchmove', (e) => {
+    }, { passive: true });
+    // Debounced touchmove to reduce rapid calls
+    document.addEventListener('touchmove', debounce((e) => {
       if (e.touches.length === 2) {
         e.preventDefault();
+        // Additional logic for two-finger move can go here
       }
-    }, { passive: false });
-
+    }, 50), { passive: false });
     document.addEventListener('touchend', (e) => {
       if (!currentPiece || isPaused) return;
       if (twoFingerGesture) {
@@ -974,13 +952,11 @@
         twoFingerGesture = false;
         return;
       }
-      // single-finger release
       if (e.touches.length === 0 && e.changedTouches.length === 1) {
         const touchEndX = e.changedTouches[0].clientX;
         const touchEndY = e.changedTouches[0].clientY;
         const diffX = touchEndX - touchStartX;
         const diffY = touchEndY - touchStartY;
-
         const now = Date.now();
         if (now - lastTapTime < doubleTapDelay) {
           animateFastDrop();
@@ -1003,19 +979,15 @@
         }
       }
     }, { passive: false });
-
-    // Mouse
     let mouseDownX = 0, mouseDownY = 0;
     document.addEventListener('mousedown', (e) => {
       mouseDownX = e.clientX;
       mouseDownY = e.clientY;
     });
-
     document.addEventListener('dblclick', (e) => {
       if (!currentPiece || isPaused) return;
       animateFastDrop();
     });
-
     document.addEventListener('mouseup', (e) => {
       if (e.target !== renderer.domElement) return;
       if (!currentPiece || isPaused) return;
@@ -1039,19 +1011,14 @@
         }
       }
     });
-
-    // On-screen rotate
     document.getElementById('rotateButton').addEventListener('click', () => {
       rotateSound.currentTime = 0;
       rotateSound.play();
       targetCameraTheta += Math.PI / 2;
     });
-
-    // Help popup & pause
     const helpPopup = document.getElementById('helpPopup');
     const helpIcon = document.getElementById('helpIcon');
     const closeHelp = document.getElementById('closeHelp');
-
     helpIcon.addEventListener('click', () => {
       helpPopup.style.display = 'block';
       isPaused = true;
@@ -1077,13 +1044,9 @@
       requestAnimationFrame(animate);
       const delta = time - lastTime;
       lastTime = time;
-
       currentCameraTheta = THREE.MathUtils.lerp(currentCameraTheta, targetCameraTheta, 0.1);
       updateCamera();
-
-      // Animate background
       bgMaterial.uniforms.time.value += delta * 0.0005;
-
       if (!isPaused) {
         ghostGroup.clear();
         if (currentPiece) {
@@ -1106,33 +1069,24 @@
           lastDropTime = now;
         }
       }
-
-      // Rotate preview camera
       previewCameraAngle += 0.01;
       previewCamera.position.x = previewCameraRadius * Math.cos(previewCameraAngle);
       previewCamera.position.z = previewCameraRadius * Math.sin(previewCameraAngle);
       previewCamera.lookAt(new THREE.Vector3(0, 0, 0));
       previewRenderer.render(previewScene, previewCamera);
-
       renderer.render(scene, camera);
     }
-
-    // Start
     spawnPiece();
     animate(0);
-
-    // Resize
-    window.addEventListener('resize', () => {
+    // Throttled resize event handler
+    window.addEventListener('resize', throttle(() => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
-
       previewCamera.aspect = previewWidth / previewHeight;
       previewCamera.updateProjectionMatrix();
       previewRenderer.setSize(previewWidth, previewHeight);
-    });
-
-    // Show help on load
+    }, 100));
     window.addEventListener('load', () => {
       helpPopup.style.display = 'block';
       isPaused = true;
