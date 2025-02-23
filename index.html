@@ -580,6 +580,8 @@
         this.z = Math.floor(BOARD_DEPTH / 2);
         this.y = BOARD_HEIGHT - 1 - maxY;
         this.materialMapping = { right: 0, left: 1, top: 2, bottom: 3, front: 4, back: 5 };
+        // New flag to ensure fast drop only happens once per piece
+        this.fastDropped = false;
         this.group = new THREE.Group();
         scene.add(this.group);
         this.createBlocks();
@@ -837,8 +839,10 @@
       }
       return ghostY;
     }
+    // --- Modified fast drop to prevent consecutive drops on new pieces ---
     function animateFastDrop() {
-      if (!currentPiece || isFastDropping) return;
+      if (!currentPiece || isFastDropping || currentPiece.fastDropped) return;
+      currentPiece.fastDropped = true;
       isFastDropping = true;
       function dropStep() {
         if (currentPiece && currentPiece.move(0, -1, 0)) {
