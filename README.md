@@ -24,11 +24,11 @@ Welcome to **TetrisTwist 3D** – where the classic Tetris game meets a mind-ben
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/tetristrist3d.git
+   git clone https://github.com/anabelle/TetrisTwist3D.git
    ```
 2. Navigate to the project directory:
    ```bash
-   cd tetristrist3d
+   cd TetrisTwist3D
    ```
 3. Open `index.html` in your favorite web browser and start playing!
 
