@@ -11,6 +11,8 @@ Welcome to **TetrisTwist 3D** – where the classic Tetris game meets a mind-ben
 - **Intuitive Controls**: Use keyboard, mouse, or touch controls to play your way.
 - **High Scores**: Challenge yourself and beat your personal best!
 - **Stunning Visuals**: Enjoy vibrant colors and smooth animations.
+- **Play Modes**: Choose between 'Layer' mode, where you clear complete horizontal layers, or 'Rows' mode, where you clear complete rows along both X and Z axes.
+- **Game Options**: Choose between different game speeds and clear modes.
 
 ## 🎮 How to Play
 
@@ -18,7 +20,7 @@ Welcome to **TetrisTwist 3D** – where the classic Tetris game meets a mind-ben
 - **Rotate**: Use ⬆️ to rotate pieces around the X axis and ⬇️ for the Y axis.
 - **Fast Drop**: Hit ⏎ / Double click or Double Tap to drop pieces quickly.
 - **Camera Rotation**: Use ␣ to rotate the camera 90°.
-- **Swipe**: Tap the 🔄 button to rotate the camera.
+- **Swipe**: Tap the 🔄 buttons to rotate the camera.
 
 ## 📦 Installation
 
