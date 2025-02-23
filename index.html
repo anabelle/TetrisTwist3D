@@ -283,6 +283,12 @@
       document.getElementById('muteIcon').textContent = isMuted ? '🔇' : '🔊';
     });
 
+    // Pause/Play toggle
+    document.getElementById('pauseIcon').addEventListener('click', () => {
+      isPaused = !isPaused;
+      document.getElementById('pauseIcon').textContent = isPaused ? '►' : '||';
+    });
+
     // --- Options modal event listeners ---
     const optionsPopup = document.getElementById('optionsPopup');
     const optionsIcon = document.getElementById('optionsIcon');
@@ -292,6 +298,7 @@
     optionsIcon.addEventListener('click', () => {
       optionsPopup.style.display = 'block';
       isPaused = true;
+      document.getElementById('pauseIcon').textContent = '►';
     });
     closeOptions.addEventListener('click', () => {
       optionsPopup.style.display = 'none';
@@ -305,6 +312,7 @@
         }
       });
       isPaused = false;
+      document.getElementById('pauseIcon').textContent = '||';
     });
     speedSelect.addEventListener('input', () => {
       speedValue.textContent = speedSelect.value;
@@ -314,11 +322,11 @@
     const helpPopup = document.getElementById('helpPopup');
     const helpIcon = document.getElementById('helpIcon');
     const closeHelp = document.getElementById('closeHelp');
-    helpIcon.addEventListener('click', () => { helpPopup.style.display = 'block'; isPaused = true; });
-    closeHelp.addEventListener('click', () => { helpPopup.style.display = 'none'; isPaused = false; });
+    helpIcon.addEventListener('click', () => { helpPopup.style.display = 'block'; isPaused = true; document.getElementById('pauseIcon').textContent = '►'; });
+    closeHelp.addEventListener('click', () => { helpPopup.style.display = 'none'; isPaused = false; document.getElementById('pauseIcon').textContent = '||'; });
     window.addEventListener('click', (event) => {
-      if (event.target === helpPopup) { helpPopup.style.display = 'none'; isPaused = false; }
-      if (event.target === optionsPopup) { optionsPopup.style.display = 'none'; isPaused = false; }
+      if (event.target === helpPopup) { helpPopup.style.display = 'none'; isPaused = false; document.getElementById('pauseIcon').textContent = '||'; }
+      if (event.target === optionsPopup) { optionsPopup.style.display = 'none'; isPaused = false; document.getElementById('pauseIcon').textContent = '||'; }
     });
 
     // --- Scene, camera, and renderer ---
@@ -743,7 +751,7 @@
           chainOccurred = false;
           // Clear rows along X direction (for each fixed z and y)
           for (let z = 0; z < BOARD_DEPTH; z++) {
-            for (let y = 0; y < BOARD_HEIGHT; ) {
+            for (let y = 0; y < BOARD_HEIGHT;) {
               let full = true;
               for (let x = 0; x < BOARD_WIDTH; x++) {
                 if (board[x][z][y] === null) { full = false; break; }
@@ -772,7 +780,7 @@
           }
           // Clear rows along Z direction (for each fixed x and y)
           for (let x = 0; x < BOARD_WIDTH; x++) {
-            for (let y = 0; y < BOARD_HEIGHT; ) {
+            for (let y = 0; y < BOARD_HEIGHT;) {
               let full = true;
               for (let z = 0; z < BOARD_DEPTH; z++) {
                 if (board[x][z][y] === null) { full = false; break; }
@@ -1087,7 +1095,7 @@
       previewCamera.updateProjectionMatrix();
       previewRenderer.setSize(previewWidth, previewHeight);
     }, 100));
-    window.addEventListener('load', () => { helpPopup.style.display = 'block'; isPaused = true; });
+    window.addEventListener('load', () => { helpPopup.style.display = 'block'; isPaused = true; document.getElementById('pauseIcon').textContent = '►'; });
   </script>
 </body>
 
