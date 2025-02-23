@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TetrisTwist 3D by @heyanabelle</title>
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Crect x='8' y='8' width='20' height='20' fill='%23FF0000'/%3E%3Crect x='28' y='8' width='20' height='20' fill='%2300FF00'/%3E%3Crect x='8' y='28' width='20' height='20' fill='%230000FF'/%3E%3Crect x='28' y='28' width='20' height='20' fill='%23FFFF00'/%3E%3C/svg%3E">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #score {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-family: sans-serif;
+      font-size: 20px;
+      z-index: 10;
+    }
+
+    #highscore {
+      position: fixed;
+      top: 35px;
+      left: 10px;
+      color: white;
+      font-family: sans-serif;
+      font-size: 16px;
+      z-index: 10;
+    }
+
+    #nextPieceContainer {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 150px;
+      height: 150px;
+      background: #222;
+      border: 2px solid #555;
+      z-index: 10;
+    }
+
+    /* Controls (help, pause, mute) */
+    #controls {
+      position: fixed;
+      top: 170px;
+      right: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10;
+    }
+
+    .icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      border: 2px solid #555;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 40px;
+      font-size: 20px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* Subtle rotate button at bottom center */
+    .rotate-button {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(45deg, rgba(0, 255, 255, 0.2), rgba(255, 255, 255, 0.2));
+      border: 1px solid rgba(0, 255, 255, 0.4);
+      border-radius: 50%;
+      font-size: 24px;
+      color: #ffffff;
+      text-align: center;
+      line-height: 50px;
+      cursor: pointer;
+      user-select: none;
+      box-shadow: 0 0 6px rgba(0, 255, 255, 0.3);
+      z-index: 20;
+      transition: background 0.2s, border 0.2s, box-shadow 0.2s;
+    }
+
+    .rotate-button:hover {
+      background: linear-gradient(45deg, rgba(0, 255, 255, 0.3), rgba(255, 255, 255, 0.3));
+      border: 1px solid rgba(0, 255, 255, 0.6);
+      box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+    }
+
+    /* Popup de ayuda */
+    .popup {
+      display: none;
+      position: fixed;
+      z-index: 100;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .popup-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 400px;
+      font-family: sans-serif;
+      color: #333;
+    }
+
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: black;
+      text-decoration: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="score">Score: 0</div>
+  <div id="highscore"></div>
+  <div id="nextPieceContainer"></div>
+  <!-- Controls -->
+  <div id="controls">
+    <div id="helpIcon" class="icon">?</div>
+    <div id="pauseIcon" class="icon">||</div>
+    <div id="muteIcon" class="icon">🔇</div>
+  </div>
+  <!-- On-screen rotate button -->
+  <div id="rotateButton" class="rotate-button">&#x21ba;</div>
+  <!-- Popup de ayuda -->
+  <div id="helpPopup" class="popup">
+    <div class="popup-content">
+      <span id="closeHelp" class="close">&times;</span>
+      <h2>Welcome to TetrisTwist 3D</h2>
+      <p>A 3D version of the classic Tetris game with a perspective twist.</p>
+      <h3>Game Controls</h3>
+      <p>You can use the keyboard or swipe on the screen to play.</p>
+      <ul>
+        <li><strong>⬅️/➡️</strong>: Move piece left/right relative to camera.</li>
+        <li><strong>⬆️</strong>: Rotate piece around X axis.</li>
+        <li><strong>⬇️</strong>: Rotate piece around Y axis.</li>
+        <li><strong>⏎ / Tap</strong>: Fast drop piece.</li>
+        <li><strong>[space]</strong>: Rotate camera 90° (keyboard).</li>
+        <li><strong>🔄</strong>: Rotate camera 90°.</li>
+      </ul>
+      <p>Built with ❤️ by <a href="https://heyanabelle.com" target="_blank">@heyanabelle</a></p>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from './three.module.js';
+
+    // -----------------------
+    // Audio: Load background music asynchronously using THREE.AudioLoader
+    // -----------------------
+    let isMuted = true;
+
+    // Create an audio listener and attach it to the camera later (after camera is created)
+    let backgroundMusic;
+
+    // Other sound effects loaded with traditional Audio objects
+    const dropSound = new Audio("videogame_tetris-drop.mp3");
+    dropSound.volume = 0.4;
+    dropSound.muted = isMuted;
+
+    const clearSound = new Audio("videogame_tetris-line.mp3");
+    clearSound.volume = 0.6;
+    clearSound.muted = isMuted;
+
+    const rotateSound = new Audio("videogame_tetris-rotate.mp3");
+    rotateSound.volume = 0.4;
+    rotateSound.muted = isMuted;
+
+    const gameOverSound = new Audio("videogame_tetris-gameover.mp3");
+    gameOverSound.volume = 0.6;
+    gameOverSound.muted = isMuted;
+
+    const pieceRotateSound = new Audio("videogame_tetris-piece-rotate.mp3");
+    pieceRotateSound.volume = 0.4;
+    pieceRotateSound.muted = isMuted;
+
+    // -----------------------
+    // Scene, camera, and main renderer
+    // -----------------------
+    const scene = new THREE.Scene();
+    const BOARD_WIDTH = 8, BOARD_DEPTH = 8, BOARD_HEIGHT = 20;
+    // The board center is (4,10,4)
+    const boardCenter = new THREE.Vector3(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, BOARD_DEPTH / 2);
+    let targetCameraTheta = 0, currentCameraTheta = 0;
+    const cameraRadius = 18;
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    function updateCamera() {
+      camera.position.x = boardCenter.x + cameraRadius * Math.cos(currentCameraTheta);
+      camera.position.y = boardCenter.y + 10;
+      camera.position.z = boardCenter.z + cameraRadius * Math.sin(currentCameraTheta);
+      camera.lookAt(boardCenter);
+    }
+    updateCamera();
+    // Attach an audio listener to the camera and create the THREE.Audio for background music
+    const listener = new THREE.AudioListener();
+    camera.add(listener);
+    backgroundMusic = new THREE.Audio(listener);
+    const audioLoader = new THREE.AudioLoader();
+    audioLoader.load('arcade.mp3', function (buffer) {
+      backgroundMusic.setBuffer(buffer);
+      backgroundMusic.setLoop(true);
+      backgroundMusic.setVolume(isMuted ? 0 : 0.5);
+      // Optionally, you can start playback on a user gesture:
+      document.addEventListener('click', () => {
+        if (!backgroundMusic.isPlaying) backgroundMusic.play();
+      }, { once: true });
+    });
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    // -----------------------
+    // Audio mute toggle
+    // -----------------------
+    document.getElementById('muteIcon').addEventListener('click', () => {
+      isMuted = !isMuted;
+      backgroundMusic.setVolume(isMuted ? 0 : 0.5);
+      dropSound.muted = isMuted;
+      clearSound.muted = isMuted;
+      rotateSound.muted = isMuted;
+      gameOverSound.muted = isMuted;
+      pieceRotateSound.muted = isMuted;
+      document.getElementById('muteIcon').textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    // -----------------------
+    // Board parameters and score
+    // -----------------------
+    let score = 0;
+    let isPaused = true;
+    let highScore = Number(localStorage.getItem("highScore")) || 0;
+    const highScoreElement = document.getElementById("highscore");
+    if (highScore > 0) {
+      highScoreElement.textContent = "High Score: " + highScore;
+    } else {
+      highScoreElement.textContent = "";
+    }
+    const board = [];
+    for (let x = 0; x < BOARD_WIDTH; x++) {
+      board[x] = [];
+      for (let z = 0; z < BOARD_DEPTH; z++) {
+        board[x][z] = new Array(BOARD_HEIGHT).fill(null);
+      }
+    }
+
+    // -----------------------
+    // Scene setup (background, floor, lights, etc.)
+    // -----------------------
+    // Animated background sphere
+    const bgGeometry = new THREE.SphereGeometry(500, 32, 32);
+    const bgMaterial = new THREE.ShaderMaterial({
+      uniforms: { time: { value: 0.0 } },
+      vertexShader: `
+        varying vec3 vPos;
+        void main(){
+          vPos = normalize(position);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float time;
+        varying vec3 vPos;
+        const float PI = 3.141592653589793;
+        void main(){
+          float angle = atan(vPos.z, vPos.x);
+          float u = fract(angle / (2.0 * PI) + 0.5);
+          float v = (asin(vPos.y) / PI) + 0.5;
+          float freq = 4.0;
+          vec3 color = vec3(
+            0.2 + 0.2 * sin(time + freq * 2.0 * PI * u),
+            0.2 + 0.2 * cos(time + freq * 2.0 * PI * v),
+            0.3 + 0.2 * sin(time + freq * 2.0 * PI * u * 0.5)
+          );
+          gl_FragColor = vec4(color, 1.0);
+        }
+      `,
+      side: THREE.BackSide
+    });
+    const bgSphere = new THREE.Mesh(bgGeometry, bgMaterial);
+    scene.add(bgSphere);
+
+    // Large floor with grid texture
+    function createLargeFloorTexture() {
+      const size = 1024;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = "#f0f0f0";
+      ctx.fillRect(0, 0, size, size);
+      const gridCells = BOARD_WIDTH;
+      const regionSize = 0.1 * size;
+      const cellSize = regionSize / gridCells;
+      const startX = Math.floor((0.5 - 0.05) * size);
+      const startY = Math.floor((0.5 - 0.05) * size);
+      const endX = startX + regionSize;
+      const endY = startY + regionSize;
+      ctx.strokeStyle = "#999999";
+      ctx.lineWidth = 2;
+      for (let i = 0; i <= gridCells; i++) {
+        let xPos = startX + i * cellSize;
+        ctx.beginPath();
+        ctx.moveTo(xPos, startY);
+        ctx.lineTo(xPos, endY);
+        ctx.stroke();
+        let yPos = startY + i * cellSize;
+        ctx.beginPath();
+        ctx.moveTo(startX, yPos);
+        ctx.lineTo(endX, yPos);
+        ctx.stroke();
+      }
+      const gradient = ctx.createRadialGradient(
+        size / 2, size / 2, size * 0.4,
+        size / 2, size / 2, size * 0.55
+      );
+      gradient.addColorStop(0, "rgba(255, 255, 255, 0.0)");
+      gradient.addColorStop(1, "rgba(255, 255, 255, 1.0)");
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+      ctx.globalCompositeOperation = "source-over";
+      return new THREE.CanvasTexture(canvas);
+    }
+    const floorTexture = createLargeFloorTexture();
+    const planeGeometry = new THREE.PlaneGeometry(80, 80);
+    const planeMaterial = new THREE.MeshPhongMaterial({
+      map: floorTexture,
+      side: THREE.DoubleSide,
+      transparent: true
+    });
+    const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.set(BOARD_WIDTH / 2, 0, BOARD_DEPTH / 2);
+    plane.receiveShadow = true;
+    scene.add(plane);
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    scene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    directionalLight.position.set(0, 50, 50);
+    directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 1024;
+    directionalLight.shadow.mapSize.height = 1024;
+    directionalLight.shadow.camera.near = 1;
+    directionalLight.shadow.camera.far = 200;
+    directionalLight.shadow.camera.left = -50;
+    directionalLight.shadow.camera.right = 50;
+    directionalLight.shadow.camera.top = 50;
+    directionalLight.shadow.camera.bottom = -50;
+    scene.add(directionalLight);
+
+    // Board groups
+    const boardGroup = new THREE.Group();
+    scene.add(boardGroup);
+    const ghostGroup = new THREE.Group();
+    scene.add(ghostGroup);
+    const boardBox = new THREE.BoxGeometry(BOARD_WIDTH, BOARD_HEIGHT, BOARD_DEPTH);
+    const edges = new THREE.EdgesGeometry(boardBox);
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
+    const wireframe = new THREE.LineSegments(edges, lineMaterial);
+    wireframe.position.set(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, BOARD_DEPTH / 2);
+    scene.add(wireframe);
+
+    // Block textures
+    function createBlockTexture(hexColor) {
+      const size = 64;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = hexColor;
+      ctx.fillRect(0, 0, size, size);
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 8;
+      ctx.strokeRect(0, 0, size, size);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.magFilter = THREE.NearestFilter;
+      texture.minFilter = THREE.NearestFilter;
+      return texture;
+    }
+    const rubikColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xffa500, 0xffffff];
+    const FIXED_MATERIALS = rubikColors.map(color => {
+      const hexStr = '#' + color.toString(16).padStart(6, '0');
+      return new THREE.MeshPhongMaterial({ map: createBlockTexture(hexStr) });
+    });
+
+    function updateMaterialMapping(oldMapping, axis) {
+      const canonical = {
+        right: new THREE.Vector3(1, 0, 0),
+        left: new THREE.Vector3(-1, 0, 0),
+        top: new THREE.Vector3(0, 1, 0),
+        bottom: new THREE.Vector3(0, -1, 0),
+        front: new THREE.Vector3(0, 0, 1),
+        back: new THREE.Vector3(0, 0, -1)
+      };
+      let newMapping = {};
+      for (let face in canonical) {
+        let rotated = canonical[face].clone().applyAxisAngle(axis, Math.PI / 2);
+        let bestKey = null, bestDot = -Infinity;
+        for (let key in canonical) {
+          let dot = rotated.dot(canonical[key]);
+          if (dot > bestDot) {
+            bestDot = dot;
+            bestKey = key;
+          }
+        }
+        newMapping[bestKey] = oldMapping[face];
+      }
+      return newMapping;
+    }
+
+    function createGhostCube(x, y, z, size = 1) {
+      const material = new THREE.MeshPhongMaterial({
+        color: 0xffffff,
+        opacity: 0.7,
+        transparent: true,
+        emissive: 0xffffff,
+        emissiveIntensity: 0.8
+      });
+      const geometry = new THREE.BoxGeometry(size, size, size);
+      const cube = new THREE.Mesh(geometry, material);
+      cube.position.set(x + 0.5, y + 0.5, z + 0.5);
+      return cube;
+    }
+
+    const pieceShapes = {
+      I: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, { x: 2, y: 0, z: 0 }, { x: 3, y: 0, z: 0 }],
+      O: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 1, y: 1, z: 0 }],
+      T: [{ x: 1, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 1, y: 1, z: 0 }, { x: 2, y: 1, z: 0 }],
+      P: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }],
+      Cube: [
+        { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 },
+        { x: 0, y: 1, z: 0 }, { x: 1, y: 1, z: 0 },
+        { x: 0, y: 0, z: 1 }, { x: 1, y: 0, z: 1 },
+        { x: 0, y: 1, z: 1 }, { x: 1, y: 1, z: 1 }
+      ],
+      L: [
+        { x: 0, y: 0, z: 0 },
+        { x: 0, y: 1, z: 0 },
+        { x: 0, y: 2, z: 0 },
+        { x: 1, y: 2, z: 0 }
+      ]
+    };
+
+    function rotateVectorAroundAxis(v, axis) {
+      let vec = new THREE.Vector3(v.x, v.y, v.z);
+      vec.applyAxisAngle(axis, Math.PI / 2);
+      return { x: Math.round(vec.x), y: Math.round(vec.y), z: Math.round(vec.z) };
+    }
+
+    function createTexturedCube(x, y, z, mapping) {
+      const geometry = new THREE.BoxGeometry(1, 1, 1);
+      const materialsForCube = [
+        FIXED_MATERIALS[mapping.right].clone(),
+        FIXED_MATERIALS[mapping.left].clone(),
+        FIXED_MATERIALS[mapping.top].clone(),
+        FIXED_MATERIALS[mapping.bottom].clone(),
+        FIXED_MATERIALS[mapping.front].clone(),
+        FIXED_MATERIALS[mapping.back].clone()
+      ];
+      const cube = new THREE.Mesh(geometry, materialsForCube);
+      cube.position.set(x + 0.5, y + 0.5, z + 0.5);
+      cube.castShadow = true;
+      cube.receiveShadow = true;
+      return cube;
+    }
+
+    class Piece {
+      constructor(shape) {
+        this.shape = shape.map(v => ({ ...v }));
+        let maxY = Math.max(...this.shape.map(v => v.y));
+        this.x = Math.floor(BOARD_WIDTH / 2);
+        this.z = Math.floor(BOARD_DEPTH / 2);
+        this.y = BOARD_HEIGHT - 1 - maxY;
+        this.materialMapping = { right: 0, left: 1, top: 2, bottom: 3, front: 4, back: 5 };
+        this.group = new THREE.Group();
+        scene.add(this.group);
+        this.createBlocks();
+      }
+      createBlocks() {
+        while (this.group.children.length) this.group.remove(this.group.children[0]);
+        for (let pos of this.shape) {
+          const geometry = new THREE.BoxGeometry(1, 1, 1);
+          const materialsForCube = [
+            FIXED_MATERIALS[this.materialMapping.right].clone(),
+            FIXED_MATERIALS[this.materialMapping.left].clone(),
+            FIXED_MATERIALS[this.materialMapping.top].clone(),
+            FIXED_MATERIALS[this.materialMapping.bottom].clone(),
+            FIXED_MATERIALS[this.materialMapping.front].clone(),
+            FIXED_MATERIALS[this.materialMapping.back].clone()
+          ];
+          const cube = new THREE.Mesh(geometry, materialsForCube);
+          cube.position.set(this.x + pos.x + 0.5, this.y + pos.y + 0.5, this.z + pos.z + 0.5);
+          cube.castShadow = true;
+          cube.receiveShadow = true;
+          this.group.add(cube);
+        }
+      }
+      canMove(dx, dy, dz) {
+        for (let pos of this.shape) {
+          let newX = this.x + pos.x + dx;
+          let newY = this.y + pos.y + dy;
+          let newZ = this.z + pos.z + dz;
+          if (newX < 0 || newX >= BOARD_WIDTH || newZ < 0 || newZ >= BOARD_DEPTH || newY < 0) return false;
+          if (newY < BOARD_HEIGHT && board[newX][newZ][newY] !== null) return false;
+        }
+        return true;
+      }
+      move(dx, dy, dz) {
+        if (this.canMove(dx, dy, dz)) {
+          this.x += dx;
+          this.y += dy;
+          this.z += dz;
+          this.createBlocks();
+          return true;
+        }
+        return false;
+      }
+      rotateDiscrete(axis) {
+        pieceRotateSound.currentTime = 0;
+        pieceRotateSound.play();
+        const newShape = this.shape.map(v => rotateVectorAroundAxis(v, axis));
+        const offsets = [
+          { dx: 0, dy: 0, dz: 0 },
+          { dx: 1, dy: 0, dz: 0 },
+          { dx: -1, dy: 0, dz: 0 },
+          { dx: 0, dy: 0, dz: 1 },
+          { dx: 0, dy: 0, dz: -1 },
+          { dx: 1, dy: 0, dz: 1 },
+          { dx: -1, dy: 0, dz: 1 },
+          { dx: 1, dy: 0, dz: -1 },
+          { dx: -1, dy: 0, dz: -1 }
+        ];
+        let validOffset = null;
+        for (let offset of offsets) {
+          let valid = true;
+          for (let pos of newShape) {
+            let newX = this.x + pos.x + offset.dx;
+            let newY = this.y + pos.y + offset.dy;
+            let newZ = this.z + pos.z + offset.dz;
+            if (newX < 0 || newX >= BOARD_WIDTH || newZ < 0 || newZ >= BOARD_DEPTH || newY < 0 || newY >= BOARD_HEIGHT) { valid = false; break; }
+            if (board[newX][newZ][newY] !== null) { valid = false; break; }
+          }
+          if (valid) { validOffset = offset; break; }
+        }
+        if (validOffset !== null) {
+          this.x += validOffset.dx;
+          this.y += validOffset.dy;
+          this.z += validOffset.dz;
+          this.shape = newShape;
+          this.materialMapping = updateMaterialMapping(this.materialMapping, axis);
+          this.createBlocks();
+        }
+      }
+      fixToBoard() {
+        for (let pos of this.shape) {
+          let bx = this.x + pos.x, by = this.y + pos.y, bz = this.z + pos.z;
+          const cube = createTexturedCube(bx, by, bz, this.materialMapping);
+          boardGroup.add(cube);
+          board[bx][bz][by] = cube;
+        }
+        scene.remove(this.group);
+      }
+    }
+
+    let currentPiece = null;
+    let nextPieceShape = randomShape();
+    const dropInterval = 1000;
+    let lastDropTime = Date.now();
+    function randomShape() {
+      const keys = Object.keys(pieceShapes);
+      const randomKey = keys[Math.floor(Math.random() * keys.length)];
+      return pieceShapes[randomKey];
+    }
+    function spawnPiece() {
+      currentPiece = new Piece(nextPieceShape);
+      nextPieceShape = randomShape();
+      updateNextPiecePreview();
+      if (!currentPiece.canMove(0, 0, 0)) {
+        gameOverSound.play();
+        alert("Game Over, Try again.");
+        resetGame();
+      }
+    }
+    function resetGame() {
+      if (currentPiece) {
+        scene.remove(currentPiece.group);
+        currentPiece = null;
+      }
+      while (boardGroup.children.length) {
+        boardGroup.remove(boardGroup.children[0]);
+      }
+      ghostGroup.clear();
+      for (let x = 0; x < BOARD_WIDTH; x++) {
+        for (let z = 0; z < BOARD_DEPTH; z++) {
+          board[x][z] = new Array(BOARD_HEIGHT).fill(null);
+        }
+      }
+      score = 0;
+      updateScore();
+      nextPieceShape = randomShape();
+      spawnPiece();
+    }
+    function updateScore() {
+      document.getElementById('score').textContent = "Score: " + score;
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem("highScore", highScore);
+      }
+      if (highScore > 0) {
+        highScoreElement.textContent = "High Score: " + highScore;
+      } else {
+        highScoreElement.textContent = "";
+      }
+    }
+    function clearLayers() {
+      let layersCleared = 0;
+      for (let y = 0; y < BOARD_HEIGHT; y++) {
+        let full = true;
+        for (let x = 0; x < BOARD_WIDTH; x++) {
+          for (let z = 0; z < BOARD_DEPTH; z++) {
+            if (board[x][z][y] === null) { full = false; break; }
+          }
+          if (!full) break;
+        }
+        if (full) {
+          layersCleared++;
+          for (let x = 0; x < BOARD_WIDTH; x++) {
+            for (let z = 0; z < BOARD_DEPTH; z++) {
+              boardGroup.remove(board[x][z][y]);
+              board[x][z][y] = null;
+            }
+          }
+          for (let ty = y + 1; ty < BOARD_HEIGHT; ty++) {
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+              for (let z = 0; z < BOARD_DEPTH; z++) {
+                if (board[x][z][ty] !== null) {
+                  board[x][z][ty].position.y -= 1;
+                  board[x][z][ty - 1] = board[x][z][ty];
+                  board[x][z][ty] = null;
+                }
+              }
+            }
+          }
+          y--;
+        }
+      }
+      if (layersCleared > 0) {
+        score += layersCleared * 100;
+        updateScore();
+        clearSound.play();
+      }
+    }
+    function getHorizontalMovementVector(direction) {
+      const dx = direction === -1 ? Math.sin(currentCameraTheta) : -Math.sin(currentCameraTheta);
+      const dz = direction === -1 ? -Math.cos(currentCameraTheta) : Math.cos(currentCameraTheta);
+      return { dx: Math.round(dx), dz: Math.round(dz) };
+    }
+    function computeGhostY(piece) {
+      let ghostY = piece.y;
+      while (true) {
+        let canDrop = true;
+        for (let pos of piece.shape) {
+          const newX = piece.x + pos.x, newZ = piece.z + pos.z, newY = ghostY + pos.y - 1;
+          if (newY < 0) { canDrop = false; break; }
+          if (newY < BOARD_HEIGHT && board[newX][newZ][newY] !== null) { canDrop = false; break; }
+        }
+        if (canDrop) ghostY -= 1; else break;
+      }
+      return ghostY;
+    }
+    let isFastDropping = false;
+
+    function animateFastDrop() {
+      if (event.target.closest('.popup') || event.target.closest('.rotate-button')) {
+        return;
+      }
+      
+      // Prevent multiple fast drops at the same time
+      if (isFastDropping || !currentPiece) return;
+      isFastDropping = true;
+
+      function dropStep() {
+        if (currentPiece && currentPiece.move(0, -1, 0)) {
+          setTimeout(dropStep, 30);
+        } else {
+          if (currentPiece) {
+            currentPiece.fixToBoard();
+            dropSound.currentTime = 0;
+            dropSound.play();
+            score += currentPiece.shape.length;
+            updateScore();
+            clearLayers();
+            spawnPiece();
+            lastDropTime = Date.now();
+          }
+          // Reset the flag once the drop is complete
+          isFastDropping = false;
+        }
+      }
+      dropStep();
+    }
+
+    // Next piece preview
+    const previewWidth = 150, previewHeight = 150;
+    const previewContainer = document.getElementById('nextPieceContainer');
+    const previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    previewRenderer.setSize(previewWidth, previewHeight);
+    previewContainer.appendChild(previewRenderer.domElement);
+    const previewScene = new THREE.Scene();
+    previewScene.background = new THREE.Color(0x222222);
+    const previewCamera = new THREE.PerspectiveCamera(75, previewWidth / previewHeight, 0.1, 1000);
+    let previewCameraAngle = 0;
+    const previewCameraRadius = 3;
+    previewCamera.position.set(previewCameraRadius, previewCameraRadius, previewCameraRadius);
+    previewCamera.lookAt(new THREE.Vector3(0, 0, 0));
+    const previewAmbient = new THREE.AmbientLight(0xffffff, 1);
+    previewScene.add(previewAmbient);
+    const previewDirectional = new THREE.DirectionalLight(0xffffff, 0.8);
+    previewDirectional.position.set(2, 2, 2);
+    previewScene.add(previewDirectional);
+    let previewGroup = new THREE.Group();
+    previewScene.add(previewGroup);
+    function updateNextPiecePreview() {
+      while (previewGroup.children.length) { previewGroup.remove(previewGroup.children[0]); }
+      const materialMapping = { right: 0, left: 1, top: 2, bottom: 3, front: 4, back: 5 };
+      const group = new THREE.Group();
+      let center = { x: 0, y: 0, z: 0 };
+      for (let pos of nextPieceShape) {
+        center.x += pos.x; center.y += pos.y; center.z += pos.z;
+      }
+      center.x /= nextPieceShape.length;
+      center.y /= nextPieceShape.length;
+      center.z /= nextPieceShape.length;
+      for (let pos of nextPieceShape) {
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const materialsForCube = [
+          FIXED_MATERIALS[materialMapping.right].clone(),
+          FIXED_MATERIALS[materialMapping.left].clone(),
+          FIXED_MATERIALS[materialMapping.top].clone(),
+          FIXED_MATERIALS[materialMapping.bottom].clone(),
+          FIXED_MATERIALS[materialMapping.front].clone(),
+          FIXED_MATERIALS[materialMapping.back].clone()
+        ];
+        const cube = new THREE.Mesh(geometry, materialsForCube);
+        cube.position.set(pos.x, pos.y, pos.z);
+        group.add(cube);
+      }
+      group.position.set(-center.x, -center.y, -center.z);
+      previewGroup.add(group);
+    }
+
+    // Keyboard controls
+    document.addEventListener('keydown', (event) => {
+      if (!currentPiece || isPaused) return;
+      switch (event.key) {
+        case 'ArrowRight': {
+          const { dx, dz } = getHorizontalMovementVector(-1);
+          currentPiece.move(dx, 0, dz);
+          break;
+        }
+        case 'ArrowLeft': {
+          const { dx, dz } = getHorizontalMovementVector(1);
+          currentPiece.move(dx, 0, dz);
+          break;
+        }
+        case 'ArrowUp': {
+          const right = new THREE.Vector3(-Math.sin(targetCameraTheta), 0, Math.cos(targetCameraTheta)).normalize();
+          currentPiece.rotateDiscrete(right);
+          break;
+        }
+        case 'ArrowDown': {
+          currentPiece.rotateDiscrete(new THREE.Vector3(0, 1, 0));
+          break;
+        }
+        case 'Enter':
+          animateFastDrop();
+          break;
+        case ' ':
+          if (event.shiftKey) {
+            rotateSound.currentTime = 0;
+            rotateSound.play();
+            targetCameraTheta -= Math.PI / 2;
+          } else {
+            rotateSound.currentTime = 0;
+            rotateSound.play();
+            targetCameraTheta += Math.PI / 2;
+          }
+          break;
+      }
+    });
+
+    // Touch controls
+    let touchStartX = 0, touchStartY = 0;
+    let twoFingerGesture = false, twoFingerStartX = 0;
+    const swipeThreshold = 50;
+    document.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
+      if (e.touches.length === 2) {
+        twoFingerGesture = true;
+        twoFingerStartX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      }
+    }, { passive: false });
+    document.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+    document.addEventListener('touchend', (e) => {
+      if (twoFingerGesture) {
+        if (e.touches.length === 0) {
+          let endX = 0;
+          if (e.changedTouches.length > 0) {
+            let sum = 0;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+              sum += e.changedTouches[i].clientX;
+            }
+            endX = sum / e.changedTouches.length;
+          }
+          const deltaX = endX - twoFingerStartX;
+          if (Math.abs(deltaX) >= swipeThreshold) {
+            targetCameraTheta += (deltaX > 0 ? Math.PI / 2 : -Math.PI / 2);
+          }
+        }
+        twoFingerGesture = false;
+        return;
+      }
+      if (e.touches.length === 0 && e.changedTouches.length === 1) {
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const diffX = touchEndX - touchStartX;
+        const diffY = touchEndY - touchStartY;
+        const threshold = 30;
+        if (Math.abs(diffX) < threshold && Math.abs(diffY) < threshold) {
+          animateFastDrop();
+        } else if (Math.abs(diffX) > Math.abs(diffY)) {
+          const { dx, dz } = diffX > 0 ? getHorizontalMovementVector(-1) : getHorizontalMovementVector(1);
+          currentPiece.move(dx, 0, dz);
+        } else {
+          if (diffY > 0) {
+            currentPiece.rotateDiscrete(new THREE.Vector3(0, 1, 0));
+          } else {
+            const right = new THREE.Vector3(-Math.sin(targetCameraTheta), 0, Math.cos(targetCameraTheta)).normalize();
+            currentPiece.rotateDiscrete(right);
+          }
+        }
+      }
+    }, { passive: false });
+
+    // Mouse controls
+    let mouseDownX = 0, mouseDownY = 0;
+    document.addEventListener('mousedown', (e) => {
+      mouseDownX = e.clientX;
+      mouseDownY = e.clientY;
+    });
+    document.addEventListener('mouseup', (e) => {
+      if (e.target !== renderer.domElement) return;
+      if (!currentPiece || isPaused) return;
+      const diffX = e.clientX - mouseDownX;
+      const diffY = e.clientY - mouseDownY;
+      const threshold = 30;
+      if (Math.abs(diffX) < threshold && Math.abs(diffY) < threshold) {
+        animateFastDrop();
+        return;
+      }
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        if (diffX > 0) {
+          const { dx, dz } = getHorizontalMovementVector(-1);
+          currentPiece.move(dx, 0, dz);
+        } else {
+          const { dx, dz } = getHorizontalMovementVector(1);
+          currentPiece.move(dx, 0, dz);
+        }
+      } else {
+        if (diffY > 0) {
+          currentPiece.rotateDiscrete(new THREE.Vector3(0, 1, 0));
+        } else {
+          const right = new THREE.Vector3(-Math.sin(targetCameraTheta), 0, Math.cos(targetCameraTheta)).normalize();
+          currentPiece.rotateDiscrete(right);
+        }
+      }
+    });
+
+    // On-screen rotate control
+    document.getElementById('rotateButton').addEventListener('click', () => {
+      rotateSound.currentTime = 0;
+      rotateSound.play();
+      targetCameraTheta += Math.PI / 2;
+    });
+
+    // Help popup and pause events
+    const helpPopup = document.getElementById('helpPopup');
+    const helpIcon = document.getElementById('helpIcon');
+    const closeHelp = document.getElementById('closeHelp');
+    helpIcon.addEventListener('click', () => {
+      helpPopup.style.display = 'block';
+      isPaused = true;
+    });
+    closeHelp.addEventListener('click', () => {
+      helpPopup.style.display = 'none';
+      isPaused = false;
+    });
+    window.addEventListener('click', (event) => {
+      if (event.target === helpPopup) {
+        helpPopup.style.display = 'none';
+        isPaused = false;
+      }
+    });
+    document.getElementById('pauseIcon').addEventListener('click', () => {
+      isPaused = !isPaused;
+      document.getElementById('pauseIcon').textContent = isPaused ? '▶' : '||';
+    });
+
+    // Main animation loop
+    let lastTime = 0;
+    function animate(time) {
+      requestAnimationFrame(animate);
+      const delta = time - lastTime;
+      lastTime = time;
+      currentCameraTheta = THREE.MathUtils.lerp(currentCameraTheta, targetCameraTheta, 0.1);
+      updateCamera();
+      bgMaterial.uniforms.time.value += delta * 0.0005;
+      if (!isPaused) {
+        ghostGroup.clear();
+        if (currentPiece) {
+          const ghostY = computeGhostY(currentPiece);
+          for (let pos of currentPiece.shape) {
+            const ghostBlock = createGhostCube(currentPiece.x + pos.x, ghostY + pos.y, currentPiece.z + pos.z);
+            ghostGroup.add(ghostBlock);
+          }
+        }
+        const now = Date.now();
+        if (currentPiece && now - lastDropTime > dropInterval) {
+          if (!currentPiece.move(0, -1, 0)) {
+            currentPiece.fixToBoard();
+            dropSound.play();
+            score += currentPiece.shape.length;
+            updateScore();
+            clearLayers();
+            spawnPiece();
+          }
+          lastDropTime = now;
+        }
+      }
+      previewCameraAngle += 0.01;
+      previewCamera.position.x = previewCameraRadius * Math.cos(previewCameraAngle);
+      previewCamera.position.z = previewCameraRadius * Math.sin(previewCameraAngle);
+      previewCamera.lookAt(new THREE.Vector3(0, 0, 0));
+      previewRenderer.render(previewScene, previewCamera);
+      renderer.render(scene, camera);
+    }
+    spawnPiece();
+    animate(0);
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      previewCamera.aspect = previewWidth / previewHeight;
+      previewCamera.updateProjectionMatrix();
+      previewRenderer.setSize(previewWidth, previewHeight);
+    });
+    window.addEventListener('load', () => {
+      helpPopup.style.display = 'block';
+      isPaused = true;
+    });
+  </script>
+</body>
+
+</html>
