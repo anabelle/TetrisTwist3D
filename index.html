@@ -714,23 +714,28 @@
 
     // --- Updated clearLayers: Support for chain reactions in both layer and row modes ---
     function clearLayers() {
-      let linesCleared = 0;
+      let blocksCleared = 0;
       if (gameOptions.clearMode === 'layer') {
         for (let y = 0; y < BOARD_HEIGHT; y++) {
           let full = true;
           for (let x = 0; x < BOARD_WIDTH; x++) {
             for (let z = 0; z < BOARD_DEPTH; z++) {
-              if (board[x][z][y] === null) { full = false; break; }
+              if (board[x][z][y] === null) {
+                full = false;
+                break;
+              }
             }
             if (!full) break;
           }
           if (full) {
+            // Remove all blocks in this full layer
             for (let x = 0; x < BOARD_WIDTH; x++) {
               for (let z = 0; z < BOARD_DEPTH; z++) {
                 boardGroup.remove(board[x][z][y]);
                 board[x][z][y] = null;
               }
             }
+            // Shift blocks above down by one unit
             for (let x = 0; x < BOARD_WIDTH; x++) {
               for (let z = 0; z < BOARD_DEPTH; z++) {
                 for (let ty = y + 1; ty < BOARD_HEIGHT; ty++) {
@@ -742,8 +747,9 @@
                 }
               }
             }
-            linesCleared++;
-            y--; // recheck the same level after shifting
+            // Each cleared block is worth 10 points
+            blocksCleared += BOARD_WIDTH * BOARD_DEPTH;
+            y--; // Re-check this level after shifting
           }
         }
       } else if (gameOptions.clearMode === 'rows') {
@@ -756,7 +762,10 @@
             for (let y = 0; y < BOARD_HEIGHT;) {
               let full = true;
               for (let x = 0; x < BOARD_WIDTH; x++) {
-                if (board[x][z][y] === null) { full = false; break; }
+                if (board[x][z][y] === null) {
+                  full = false;
+                  break;
+                }
               }
               if (full) {
                 for (let x = 0; x < BOARD_WIDTH; x++) {
@@ -772,7 +781,7 @@
                     }
                   }
                 }
-                linesCleared++;
+                blocksCleared += BOARD_WIDTH;
                 chainOccurred = true;
                 // Do not increment y so the same level is re-checked.
               } else {
@@ -785,7 +794,10 @@
             for (let y = 0; y < BOARD_HEIGHT;) {
               let full = true;
               for (let z = 0; z < BOARD_DEPTH; z++) {
-                if (board[x][z][y] === null) { full = false; break; }
+                if (board[x][z][y] === null) {
+                  full = false;
+                  break;
+                }
               }
               if (full) {
                 for (let z = 0; z < BOARD_DEPTH; z++) {
@@ -801,7 +813,7 @@
                     }
                   }
                 }
-                linesCleared++;
+                blocksCleared += BOARD_DEPTH;
                 chainOccurred = true;
               } else {
                 y++;
@@ -810,12 +822,13 @@
           }
         }
       }
-      if (linesCleared > 0) {
-        score += linesCleared * 100;
+      if (blocksCleared > 0) {
+        score += blocksCleared * 10;
         updateScore();
         clearSound.play();
       }
     }
+
 
     function getHorizontalMovementVector(direction) {
       const dx = direction === -1 ? Math.sin(currentCameraTheta) : -Math.sin(currentCameraTheta);
