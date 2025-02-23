@@ -73,12 +73,10 @@
       user-select: none;
     }
 
-    /* On-screen rotate button */
+    /* On-screen rotate buttons */
     .rotate-button {
       position: fixed;
       bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
       width: 50px;
       height: 50px;
       background: linear-gradient(45deg, rgba(0, 255, 255, 0.2), rgba(255, 255, 255, 0.2));
@@ -99,6 +97,17 @@
       background: linear-gradient(45deg, rgba(0, 255, 255, 0.3), rgba(255, 255, 255, 0.3));
       border: 1px solid rgba(0, 255, 255, 0.6);
       box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+    }
+
+    /* Positioning for left and right buttons */
+    #rotateLeftButton {
+      left: 50%;
+      transform: translateX(50%);
+    }
+
+    #rotateRightButton {
+      right: 50%;
+      transform: translateX(-50%);
     }
 
     /* Help popup */
@@ -151,8 +160,9 @@
     <div id="pauseIcon" class="icon">||</div>
     <div id="muteIcon" class="icon">🔇</div>
   </div>
-  <!-- On-screen rotate button -->
-  <div id="rotateButton" class="rotate-button">&#x21ba;</div>
+  <!-- On-screen rotate buttons -->
+  <div id="rotateLeftButton" class="rotate-button">&#x21ba;</div>
+  <div id="rotateRightButton" class="rotate-button">&#x21bb;</div>
   <!-- Help popup -->
   <div id="helpPopup" class="popup">
     <div class="popup-content">
@@ -887,11 +897,18 @@
         }
       }
     });
-    document.getElementById('rotateButton').addEventListener('click', () => {
+    // --- Rotate buttons event listeners ---
+    document.getElementById('rotateLeftButton').addEventListener('click', () => {
+      rotateSound.currentTime = 0;
+      rotateSound.play();
+      targetCameraTheta -= Math.PI / 2;
+    });
+    document.getElementById('rotateRightButton').addEventListener('click', () => {
       rotateSound.currentTime = 0;
       rotateSound.play();
       targetCameraTheta += Math.PI / 2;
     });
+
     const helpPopup = document.getElementById('helpPopup');
     const helpIcon = document.getElementById('helpIcon');
     const closeHelp = document.getElementById('closeHelp');
