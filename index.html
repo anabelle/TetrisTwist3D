@@ -703,21 +703,46 @@
       }
       return ghostY;
     }
+
     let isFastDropping = false;
+
+    // Disable fast drop triggers by removing or ignoring the event handlers
+    function disableFastDropInputs() {
+      // Example: remove event listeners or set a flag that all handlers check
+      document.removeEventListener('touchend', onFastDropEvent);
+      document.removeEventListener('mouseup', onFastDropEvent);
+      document.removeEventListener('keydown', onFastDropEvent);
+    }
+
+    function enableFastDropInputs() {
+      document.addEventListener('touchend', onFastDropEvent);
+      document.addEventListener('mouseup', onFastDropEvent);
+      document.addEventListener('keydown', onFastDropEvent);
+    }
+
+    function onFastDropEvent(event) {
+      animateFastDrop();
+    }
 
     function animateFastDrop() {
       if (event.target.closest('.popup') || event.target.closest('.rotate-button')) {
         return;
       }
-      
-      // Prevent multiple fast drops at the same time
-      if (isFastDropping || !currentPiece) return;
+
+      // Prevent running if there's no current piece or if already fast dropping
+      if (!currentPiece || isFastDropping) return;
       isFastDropping = true;
 
+      // Disable further fast drop events until drop completes
+      disableFastDropInputs();
+
+      // Use requestAnimationFrame for a smoother, more controlled drop loop
       function dropStep() {
         if (currentPiece && currentPiece.move(0, -1, 0)) {
-          setTimeout(dropStep, 30);
+          // Continue dropping on the next animation frame
+          requestAnimationFrame(dropStep);
         } else {
+          // Once no further downward movement is possible, fix the piece
           if (currentPiece) {
             currentPiece.fixToBoard();
             dropSound.currentTime = 0;
@@ -728,12 +753,18 @@
             spawnPiece();
             lastDropTime = Date.now();
           }
-          // Reset the flag once the drop is complete
+          // Re-enable fast drop triggers and unlock the flag
           isFastDropping = false;
+          enableFastDropInputs();
         }
       }
+
       dropStep();
     }
+
+    // Initially add the event listeners for fast drop triggers
+    enableFastDropInputs();
+
 
     // Next piece preview
     const previewWidth = 150, previewHeight = 150;
