@@ -18,7 +18,7 @@ Welcome to **TetrisTwist 3D** – where the classic Tetris game meets a mind-ben
 - **Rotate**: Use ⬆️ to rotate pieces around the X axis and ⬇️ for the Y axis.
 - **Fast Drop**: Hit ⏎ to drop pieces quickly.
 - **Camera Rotation**: Use ␣ to rotate the camera 90°.
-- **Swipe**: Use 👆👆/👈👉 or tap the 🔄 button to rotate the camera.
+- **Swipe**: Tap the 🔄 button to rotate the camera.
 
 ## 📦 Installation
 
@@ -34,7 +34,7 @@ Welcome to **TetrisTwist 3D** – where the classic Tetris game meets a mind-ben
 
 ## 🤝 Contributing
 
-We welcome contributions! Whether it's a bug fix, new feature, or just a suggestion, feel free to open an issue or submit a pull request.
+Contributions are welcome! Whether it's a bug fix, new feature, or just a suggestion, feel free to open an issue or submit a pull request.
 
 ## 📜 License
 
