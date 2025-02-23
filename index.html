@@ -765,7 +765,6 @@
     // Initially add the event listeners for fast drop triggers
     enableFastDropInputs();
 
-
     // Next piece preview
     const previewWidth = 150, previewHeight = 150;
     const previewContainer = document.getElementById('nextPieceContainer');
@@ -898,7 +897,7 @@
         const touchEndY = e.changedTouches[0].clientY;
         const diffX = touchEndX - touchStartX;
         const diffY = touchEndY - touchStartY;
-        const threshold = 30;
+        const threshold = 50; // increased threshold to prevent swipes triggering fast drop
         if (Math.abs(diffX) < threshold && Math.abs(diffY) < threshold) {
           animateFastDrop();
         } else if (Math.abs(diffX) > Math.abs(diffY)) {
