@@ -1065,7 +1065,11 @@
     }, { passive: false });
     let mouseDownX = 0, mouseDownY = 0;
     document.addEventListener('mousedown', (e) => { mouseDownX = e.clientX; mouseDownY = e.clientY; });
-    document.addEventListener('dblclick', (e) => { if (!currentPiece || isPaused) return; animateFastDrop(); });
+    document.addEventListener('dblclick', (e) => {
+      if (!currentPiece || isPaused || e.target.classList.contains('rotate-button')) return;
+      animateFastDrop();
+    });
+
     document.addEventListener('mouseup', (e) => {
       if (e.target !== renderer.domElement) return;
       if (!currentPiece || isPaused) return;
@@ -1083,17 +1087,18 @@
         }
       }
     });
-    // --- Rotate buttons event listeners ---
-    document.getElementById('rotateLeftButton').addEventListener('click', () => {
+    // --- Rotate buttons event listeners with debounce ---
+    document.getElementById('rotateLeftButton').addEventListener('click', debounce(() => {
       rotateSound.currentTime = 0;
       rotateSound.play();
       targetCameraTheta -= Math.PI / 2;
-    });
-    document.getElementById('rotateRightButton').addEventListener('click', () => {
+    }, 200));
+
+    document.getElementById('rotateRightButton').addEventListener('click', debounce(() => {
       rotateSound.currentTime = 0;
       rotateSound.play();
       targetCameraTheta += Math.PI / 2;
-    });
+    }, 200));
 
     // --- Main loop ---
     let lastTime = 0;
