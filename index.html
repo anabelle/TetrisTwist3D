@@ -1044,6 +1044,7 @@
         const diffY = touchEndY - touchStartY;
         const now = Date.now();
         if (now - lastTapTime < doubleTapDelay) {
+          if (!currentPiece || isPaused || e.target.classList.contains('rotate-button')) return;
           animateFastDrop();
           lastTapTime = 0;
         } else {
@@ -1092,13 +1093,13 @@
       rotateSound.currentTime = 0;
       rotateSound.play();
       targetCameraTheta -= Math.PI / 2;
-    }, 200));
+    }, 10));
 
     document.getElementById('rotateRightButton').addEventListener('click', debounce(() => {
       rotateSound.currentTime = 0;
       rotateSound.play();
       targetCameraTheta += Math.PI / 2;
-    }, 200));
+    }, 10));
 
     // --- Main loop ---
     let lastTime = 0;
