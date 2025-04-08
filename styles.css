@@ -1,0 +1,139 @@
+body {
+  margin: 0;
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+}
+
+#score,
+#highscore {
+  position: fixed;
+  left: 10px;
+  color: white;
+  font-family: sans-serif;
+  user-select: none;
+  z-index: 10;
+}
+
+#score {
+  top: 10px;
+  font-size: 20px;
+}
+
+#highscore {
+  top: 35px;
+  font-size: 16px;
+}
+
+#nextPieceContainer {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  width: 150px;
+  height: 150px;
+  background: #222;
+  border: 2px solid #555;
+  z-index: 10;
+}
+
+/* Controls (help, pause, mute, options) */
+#controls {
+  position: fixed;
+  top: 170px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 10;
+}
+
+.icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: 2px solid #555;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 40px;
+  font-size: 20px;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* On-screen rotate buttons */
+.rotate-button {
+  position: fixed;
+  bottom: 20px;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(45deg, rgba(0, 255, 255, 0.2), rgba(255, 255, 255, 0.2));
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  border-radius: 50%;
+  font-size: 24px;
+  color: #ffffff;
+  text-align: center;
+  line-height: 50px;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.3);
+  z-index: 20;
+  transition: background 0.2s, border 0.2s, box-shadow 0.2s;
+}
+
+.rotate-button:hover {
+  background: linear-gradient(45deg, rgba(0, 255, 255, 0.3), rgba(255, 255, 255, 0.3));
+  border: 1px solid rgba(0, 255, 255, 0.6);
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
+/* Positioning for left and right buttons */
+#rotateLeftButton {
+  left: 50%;
+  transform: translateX(50%);
+}
+
+#rotateRightButton {
+  right: 50%;
+  transform: translateX(-50%);
+}
+
+/* Help and Options popups */
+.popup {
+  display: none;
+  position: fixed;
+  z-index: 100;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.popup-content {
+  background-color: #fefefe;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 400px;
+  font-family: sans-serif;
+  color: #333;
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+} 
