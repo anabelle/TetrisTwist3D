@@ -104,11 +104,17 @@
       dropInterval: 1000,
       clearMode: 'layer'
     };
-    // Load saved game options from localStorage if available
-    const savedOptions = localStorage.getItem("gameOptions");
-    if (savedOptions) {
-      gameOptions = JSON.parse(savedOptions);
-    }
+    // Load saved game options from localStorage if available.
+    // Guard against corrupted JSON (would kill the whole module) and merge with
+    // defaults so options saved by older versions keep missing fields defaulted.
+    try {
+      const savedOptions = JSON.parse(localStorage.getItem("gameOptions"));
+      if (savedOptions && typeof savedOptions === 'object') {
+        gameOptions = { ...gameOptions, ...savedOptions };
+      }
+    } catch (e) { /* corrupted or missing: keep defaults */ }
+    if (!Number.isFinite(gameOptions.dropInterval)) gameOptions.dropInterval = 1000;
+    if (gameOptions.clearMode !== 'layer' && gameOptions.clearMode !== 'rows') gameOptions.clearMode = 'layer';
 
     // --- Update options panel UI to reflect current settings ---
     const speedSelect = document.getElementById('speedSelect');
@@ -392,7 +398,8 @@
       return new THREE.MeshPhongMaterial({ map: createBlockTexture(hexStr) });
     });
 
-    // --- Pre-create shared ghost geometry and material ---
+    // --- Pre-create shared geometries and materials ---
+    const pieceGeometry = new THREE.BoxGeometry(1, 1, 1);
     const ghostGeometry = new THREE.BoxGeometry(1, 1, 1);
     const ghostMaterial = new THREE.MeshPhongMaterial({
       color: 0xffffff,
@@ -430,7 +437,6 @@
       return newMapping;
     }
     function createSharedMaterialCube(x, y, z, mapping) {
-      const geometry = new THREE.BoxGeometry(1, 1, 1);
       const materialsForCube = [
         FIXED_MATERIALS[mapping.right],
         FIXED_MATERIALS[mapping.left],
@@ -439,7 +445,7 @@
         FIXED_MATERIALS[mapping.front],
         FIXED_MATERIALS[mapping.back]
       ];
-      const cube = new THREE.Mesh(geometry, materialsForCube);
+      const cube = new THREE.Mesh(pieceGeometry, materialsForCube);
       cube.position.set(x + 0.5, y + 0.5, z + 0.5);
       cube.castShadow = !isMobile;
       cube.receiveShadow = !isMobile;
@@ -492,8 +498,7 @@
             FIXED_MATERIALS[this.materialMapping.front],
             FIXED_MATERIALS[this.materialMapping.back]
           ];
-          const geometry = new THREE.BoxGeometry(1, 1, 1);
-          const cube = new THREE.Mesh(geometry, materialsForCube);
+          const cube = new THREE.Mesh(pieceGeometry, materialsForCube);
           cube.position.set(this.x + pos.x + 0.5, this.y + pos.y + 0.5, this.z + pos.z + 0.5);
           cube.castShadow = !isMobile;
           cube.receiveShadow = !isMobile;
@@ -724,8 +729,13 @@
 
 
     function getHorizontalMovementVector(direction) {
-      const dx = direction === -1 ? Math.sin(currentCameraTheta) : -Math.sin(currentCameraTheta);
-      const dz = direction === -1 ? -Math.cos(currentCameraTheta) : Math.cos(currentCameraTheta);
+      // Snap to the nearest 90° step of the TARGET camera angle: during the camera
+      // lerp animation the live angle passes through 45°, which would round to
+      // diagonal movement. Decisions must match the view the player is heading to.
+      const step = Math.PI / 2;
+      const snapped = Math.round(targetCameraTheta / step) * step;
+      const dx = direction === -1 ? Math.sin(snapped) : -Math.sin(snapped);
+      const dz = direction === -1 ? -Math.cos(snapped) : Math.cos(snapped);
       return { dx: Math.round(dx), dz: Math.round(dz) };
     }
     function computeGhostY(piece) {
@@ -802,17 +812,16 @@
         center.x += pos.x; center.y += pos.y; center.z += pos.z;
       }
       center.x /= nextPieceShape.length; center.y /= nextPieceShape.length; center.z /= nextPieceShape.length;
+      const materialsForCube = [
+        FIXED_MATERIALS[materialMapping.right],
+        FIXED_MATERIALS[materialMapping.left],
+        FIXED_MATERIALS[materialMapping.top],
+        FIXED_MATERIALS[materialMapping.bottom],
+        FIXED_MATERIALS[materialMapping.front],
+        FIXED_MATERIALS[materialMapping.back]
+      ];
       for (let pos of nextPieceShape) {
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const materialsForCube = [
-          FIXED_MATERIALS[materialMapping.right],
-          FIXED_MATERIALS[materialMapping.left],
-          FIXED_MATERIALS[materialMapping.top],
-          FIXED_MATERIALS[materialMapping.bottom],
-          FIXED_MATERIALS[materialMapping.front],
-          FIXED_MATERIALS[materialMapping.back]
-        ];
-        const cube = new THREE.Mesh(geometry, materialsForCube);
+        const cube = new THREE.Mesh(pieceGeometry, materialsForCube);
         cube.position.set(pos.x, pos.y, pos.z);
         group.add(cube);
       }
@@ -906,8 +915,13 @@
         const now = Date.now();
         if (now - lastTapTime < doubleTapDelay) {
           if (!currentPiece || isPaused || e.target.classList.contains('rotate-button')) return;
-          animateFastDrop();
-          lastTapTime = 0;
+          // Only a still second tap counts as double-tap; a fast second swipe
+          // (already moved the piece via the branch below on its own touchend)
+          // must not also trigger a fast drop.
+          if (Math.abs(diffX) < swipeThreshold && Math.abs(diffY) < swipeThreshold) {
+            animateFastDrop();
+            lastTapTime = 0;
+          }
         } else {
           lastTapTime = now;
           if (Math.abs(diffX) > swipeThreshold || Math.abs(diffY) > swipeThreshold) {
@@ -993,6 +1007,10 @@
           }
           lastDropTime = now;
         }
+      } else {
+        // While paused keep refreshing the drop timer so unpausing never
+        // triggers an instant surprise drop after a long pause.
+        lastDropTime = Date.now();
       }
       previewCameraAngle += 0.01;
       previewCamera.position.x = previewCameraRadius * Math.cos(previewCameraAngle);
