@@ -317,7 +317,7 @@
       const startY = Math.floor((0.5 - 0.05) * size);
       const endX = startX + regionSize;
       const endY = startY + regionSize;
-      ctx.strokeStyle = "#999999"; ctx.lineWidth = 2;
+      ctx.strokeStyle = "#6a6a6a"; ctx.lineWidth = 2;
       for (let i = 0; i <= gridCells; i++) {
         let xPos = startX + i * cellSize;
         ctx.beginPath();
@@ -337,11 +337,14 @@
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, size, size);
       ctx.globalCompositeOperation = "source-over";
-      return new THREE.CanvasTexture(canvas);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
     }
     const floorTexture = createLargeFloorTexture();
     const planeGeometry = new THREE.PlaneGeometry(80, 80);
-    const planeMaterial = new THREE.MeshPhongMaterial({ map: floorTexture, side: THREE.DoubleSide, transparent: true });
+    // tinted down so stronger lighting doesn't wash the floor (and the ghost) out
+    const planeMaterial = new THREE.MeshLambertMaterial({ map: floorTexture, color: 0x8e8e96, side: THREE.DoubleSide, transparent: true });
     const plane = new THREE.Mesh(planeGeometry, planeMaterial);
     plane.rotation.x = -Math.PI / 2;
     plane.position.set(BOARD_WIDTH / 2, 0, BOARD_DEPTH / 2);
@@ -349,19 +352,31 @@
     scene.add(plane);
 
     // --- Lighting ---
-    scene.add(new THREE.AmbientLight(0xffffff, 0.3));
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    directionalLight.position.set(0, 50, 50);
+    // Key light sits (almost) straight above the pit so a falling piece's
+    // shadow lands directly beneath it: the cheapest depth cue in 3D Tetris.
+    // Ambient + hemisphere fill keep side faces readable instead of muddy.
+    scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x666677, 0.6));
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.6);
+    directionalLight.position.set(BOARD_WIDTH / 2 + 0.01, 60, BOARD_DEPTH / 2 + 0.01);
+    directionalLight.target.position.set(BOARD_WIDTH / 2, 0, BOARD_DEPTH / 2);
+    scene.add(directionalLight.target);
     directionalLight.castShadow = !isMobile;
     directionalLight.shadow.mapSize.width = 1024;
     directionalLight.shadow.mapSize.height = 1024;
     directionalLight.shadow.camera.near = 1;
-    directionalLight.shadow.camera.far = 200;
-    directionalLight.shadow.camera.left = -50;
-    directionalLight.shadow.camera.right = 50;
-    directionalLight.shadow.camera.top = 50;
-    directionalLight.shadow.camera.bottom = -50;
+    directionalLight.shadow.camera.far = 100;
+    // tight frustum around the pit = crisp shadows
+    directionalLight.shadow.camera.left = -8;
+    directionalLight.shadow.camera.right = 8;
+    directionalLight.shadow.camera.top = 8;
+    directionalLight.shadow.camera.bottom = -8;
+    directionalLight.shadow.bias = -0.0005;
     scene.add(directionalLight);
+    // Gentle side light from the camera's start side so front faces aren't flat
+    const sideLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    sideLight.position.set(40, 30, 20);
+    scene.add(sideLight);
 
     // --- Board and ghost groups ---
     const boardGroup = new THREE.Group();
@@ -376,76 +391,63 @@
     wireframe.position.set(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, BOARD_DEPTH / 2);
     scene.add(wireframe);
 
-    // --- Block textures ---
+    // --- Block textures: Rubik-style sticker (one color) on a black plastic body ---
     function createBlockTexture(hexColor) {
-      const size = isMobile ? 32 : 64;
+      const size = isMobile ? 64 : 128;
       const canvas = document.createElement('canvas');
       canvas.width = size; canvas.height = size;
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle = hexColor;
+      ctx.fillStyle = '#111111';
       ctx.fillRect(0, 0, size, size);
-      ctx.strokeStyle = "#000000";
-      ctx.lineWidth = isMobile ? 4 : 8;
-      ctx.strokeRect(0, 0, size, size);
+      const inset = size * 0.07, r = size * 0.12, s = size - inset * 2;
+      ctx.fillStyle = hexColor;
+      ctx.beginPath();
+      ctx.roundRect(inset, inset, s, s, r);
+      ctx.fill();
+      // soft top highlight so faces read as plastic, not flat paint
+      const g = ctx.createLinearGradient(0, inset, 0, inset + s);
+      g.addColorStop(0, 'rgba(255,255,255,0.22)');
+      g.addColorStop(0.5, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.roundRect(inset, inset, s, s, r);
+      ctx.fill();
       const texture = new THREE.CanvasTexture(canvas);
-      texture.magFilter = THREE.NearestFilter;
-      texture.minFilter = THREE.NearestFilter;
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = 4;
       return texture;
     }
-    const rubikColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xffa500, 0xffffff];
-    const FIXED_MATERIALS = rubikColors.map(color => {
-      const hexStr = '#' + color.toString(16).padStart(6, '0');
-      return new THREE.MeshPhongMaterial({ map: createBlockTexture(hexStr) });
-    });
+    // One color per piece type, so the stack stays readable: you can tell where
+    // one piece ends and the next begins, and recognize a shape by its color.
+    const PIECE_COLORS = {
+      I: '#e8333a', // red
+      O: '#ffd23f', // yellow
+      T: '#9b5de5', // purple
+      P: '#2ec27e', // green
+      Cube: '#ff8c1a', // orange
+      L: '#2f7cf6' // blue
+    };
 
     // --- Pre-create shared geometries and materials ---
     const pieceGeometry = new THREE.BoxGeometry(1, 1, 1);
-    const ghostGeometry = new THREE.BoxGeometry(1, 1, 1);
-    const ghostMaterial = new THREE.MeshPhongMaterial({
-      color: 0xffffff,
-      opacity: 0.7,
-      transparent: true,
-      emissive: 0xffffff,
-      emissiveIntensity: 0.8
+    // Ghost = quiet outline of where the piece will land, plus a faint fill.
+    const ghostGeometry = new THREE.BoxGeometry(0.96, 0.96, 0.96);
+    const ghostEdges = new THREE.EdgesGeometry(ghostGeometry);
+    const ghostFillMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.12, depthWrite: false
+    });
+    const ghostLineMaterial = new THREE.LineBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.75
     });
     function createGhostCube(x, y, z) {
-      const cube = new THREE.Mesh(ghostGeometry, ghostMaterial);
+      const cube = new THREE.Mesh(ghostGeometry, ghostFillMaterial);
+      cube.add(new THREE.LineSegments(ghostEdges, ghostLineMaterial));
       cube.position.set(x + 0.5, y + 0.5, z + 0.5);
       return cube;
     }
 
-    // --- Helper for rotating piece face mapping ---
-    function updateMaterialMapping(oldMapping, axis) {
-      const canonical = {
-        right: new THREE.Vector3(1, 0, 0),
-        left: new THREE.Vector3(-1, 0, 0),
-        top: new THREE.Vector3(0, 1, 0),
-        bottom: new THREE.Vector3(0, -1, 0),
-        front: new THREE.Vector3(0, 0, 1),
-        back: new THREE.Vector3(0, 0, -1)
-      };
-      let newMapping = {};
-      for (let face in canonical) {
-        let rotated = canonical[face].clone().applyAxisAngle(axis, Math.PI / 2);
-        let bestKey = null, bestDot = -Infinity;
-        for (let key in canonical) {
-          let dot = rotated.dot(canonical[key]);
-          if (dot > bestDot) { bestDot = dot; bestKey = key; }
-        }
-        newMapping[bestKey] = oldMapping[face];
-      }
-      return newMapping;
-    }
-    function createSharedMaterialCube(x, y, z, mapping) {
-      const materialsForCube = [
-        FIXED_MATERIALS[mapping.right],
-        FIXED_MATERIALS[mapping.left],
-        FIXED_MATERIALS[mapping.top],
-        FIXED_MATERIALS[mapping.bottom],
-        FIXED_MATERIALS[mapping.front],
-        FIXED_MATERIALS[mapping.back]
-      ];
-      const cube = new THREE.Mesh(pieceGeometry, materialsForCube);
+    function createBoardCube(x, y, z, material) {
+      const cube = new THREE.Mesh(pieceGeometry, material);
       cube.position.set(x + 0.5, y + 0.5, z + 0.5);
       cube.castShadow = !isMobile;
       cube.receiveShadow = !isMobile;
@@ -466,6 +468,10 @@
       ],
       L: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 0, y: 2, z: 0 }, { x: 1, y: 2, z: 0 }]
     };
+    // shape array (by identity) -> its shared material
+    const SHAPE_MATERIALS = new Map(Object.entries(pieceShapes).map(([name, shape]) =>
+      [shape, new THREE.MeshPhongMaterial({ map: createBlockTexture(PIECE_COLORS[name]), shininess: 60, specular: 0x333333 })]
+    ));
     function rotateVectorAroundAxis(v, axis) {
       const vec = new THREE.Vector3(v.x, v.y, v.z);
       vec.applyAxisAngle(axis, Math.PI / 2);
@@ -478,7 +484,7 @@
         this.x = Math.floor(BOARD_WIDTH / 2);
         this.z = Math.floor(BOARD_DEPTH / 2);
         this.y = BOARD_HEIGHT - 1 - maxY;
-        this.materialMapping = { right: 0, left: 1, top: 2, bottom: 3, front: 4, back: 5 };
+        this.material = SHAPE_MATERIALS.get(shape);
         // New flag to ensure fast drop only happens once per piece
         this.fastDropped = false;
         this.group = new THREE.Group();
@@ -490,19 +496,7 @@
           this.group.remove(this.group.children[0]);
         }
         for (let pos of this.shape) {
-          const materialsForCube = [
-            FIXED_MATERIALS[this.materialMapping.right],
-            FIXED_MATERIALS[this.materialMapping.left],
-            FIXED_MATERIALS[this.materialMapping.top],
-            FIXED_MATERIALS[this.materialMapping.bottom],
-            FIXED_MATERIALS[this.materialMapping.front],
-            FIXED_MATERIALS[this.materialMapping.back]
-          ];
-          const cube = new THREE.Mesh(pieceGeometry, materialsForCube);
-          cube.position.set(this.x + pos.x + 0.5, this.y + pos.y + 0.5, this.z + pos.z + 0.5);
-          cube.castShadow = !isMobile;
-          cube.receiveShadow = !isMobile;
-          this.group.add(cube);
+          this.group.add(createBoardCube(this.x + pos.x, this.y + pos.y, this.z + pos.z, this.material));
         }
       }
       canMove(dx, dy, dz) {
@@ -553,7 +547,6 @@
           if (valid) {
             this.x += offset.dx; this.y += offset.dy; this.z += offset.dz;
             this.shape = newShape;
-            this.materialMapping = updateMaterialMapping(this.materialMapping, axis);
             this.createBlocks();
             break;
           }
@@ -564,7 +557,7 @@
           const bx = this.x + pos.x;
           const by = this.y + pos.y;
           const bz = this.z + pos.z;
-          const cube = createSharedMaterialCube(bx, by, bz, this.materialMapping);
+          const cube = createBoardCube(bx, by, bz, this.material);
           boardGroup.add(cube);
           board[bx][bz][by] = cube;
         }
@@ -806,22 +799,14 @@
         previewGroup.remove(previewGroup.children[0]);
       }
       const group = new THREE.Group();
-      const materialMapping = { right: 0, left: 1, top: 2, bottom: 3, front: 4, back: 5 };
       let center = { x: 0, y: 0, z: 0 };
       for (let pos of nextPieceShape) {
         center.x += pos.x; center.y += pos.y; center.z += pos.z;
       }
       center.x /= nextPieceShape.length; center.y /= nextPieceShape.length; center.z /= nextPieceShape.length;
-      const materialsForCube = [
-        FIXED_MATERIALS[materialMapping.right],
-        FIXED_MATERIALS[materialMapping.left],
-        FIXED_MATERIALS[materialMapping.top],
-        FIXED_MATERIALS[materialMapping.bottom],
-        FIXED_MATERIALS[materialMapping.front],
-        FIXED_MATERIALS[materialMapping.back]
-      ];
+      const material = SHAPE_MATERIALS.get(nextPieceShape);
       for (let pos of nextPieceShape) {
-        const cube = new THREE.Mesh(pieceGeometry, materialsForCube);
+        const cube = new THREE.Mesh(pieceGeometry, material);
         cube.position.set(pos.x, pos.y, pos.z);
         group.add(cube);
       }

@@ -89,15 +89,16 @@ canvas {
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
 }
 
-/* Positioning for left and right buttons */
+/* Positioning for left and right buttons: left button sits left of center,
+   right button right of center (they were swapped before). */
 #rotateLeftButton {
   left: 50%;
-  transform: translateX(50%);
+  transform: translateX(calc(-100% - 26px));
 }
 
 #rotateRightButton {
-  right: 50%;
-  transform: translateX(-50%);
+  left: 50%;
+  transform: translateX(26px);
 }
 
 /* Help and Options popups */
