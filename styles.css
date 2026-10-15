@@ -1,140 +1,281 @@
+/* TetrisTwist 3D — Rubik-toy UI pass */
+
+:root {
+  --ink: #f4f4f8;
+  --ink-dim: #b9bac6;
+  --panel: rgba(16, 17, 24, 0.82);
+  --panel-line: rgba(255, 255, 255, 0.14);
+  --accent: #ffd23f;
+  --radius: 14px;
+  --font: "Nunito", "Avenir Next Rounded", "SF Pro Rounded", ui-rounded,
+    "Segoe UI", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
 body {
   margin: 0;
   overflow: hidden;
-}
-
-canvas {
-  display: block;
-}
-
-#score,
-#highscore {
-  position: fixed;
-  left: 10px;
-  color: white;
-  font-family: sans-serif;
+  font-family: var(--font);
+  background: #0b0c12;
+  color: var(--ink);
+  -webkit-user-select: none;
   user-select: none;
+  touch-action: none;
+}
+
+canvas { display: block; }
+
+/* ---------- HUD ---------- */
+
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
   z-index: 10;
+}
+
+#scorePanel {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 8px 16px 10px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: var(--radius);
+  backdrop-filter: blur(6px);
 }
 
 #score {
-  top: 10px;
-  font-size: 20px;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0.5px;
 }
 
 #highscore {
-  top: 35px;
-  font-size: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--ink-dim);
 }
 
 #nextPieceContainer {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  width: 150px;
-  height: 150px;
-  background: #222;
-  border: 2px solid #555;
-  z-index: 10;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 132px;
+  height: 132px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  backdrop-filter: blur(6px);
 }
 
-/* Controls (help, pause, mute, options) */
+#nextPieceContainer canvas { border-radius: var(--radius); }
+
+/* ---------- Icon buttons ---------- */
+
 #controls {
-  position: fixed;
-  top: 170px;
-  right: 10px;
+  position: absolute;
+  top: 156px;
+  right: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  z-index: 10;
+  pointer-events: auto;
+}
+
+button {
+  font-family: var(--font);
+  color: var(--ink);
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 .icon {
-  width: 40px;
-  height: 40px;
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  border: 2px solid #555;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
   border-radius: 50%;
-  text-align: center;
-  line-height: 40px;
-  font-size: 20px;
-  cursor: pointer;
-  user-select: none;
+  backdrop-filter: blur(6px);
+  transition: transform 0.12s ease, border-color 0.12s ease;
 }
 
-/* On-screen rotate buttons */
+.icon svg { width: 22px; height: 22px; }
+
+.icon:hover { border-color: rgba(255, 255, 255, 0.4); transform: scale(1.06); }
+.icon:active { transform: scale(0.94); }
+
+.icon:focus-visible,
+.rotate-button:focus-visible,
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* pause: show play icon when paused */
+#pauseIcon .ic-play { display: none; }
+#pauseIcon.paused .ic-play { display: block; }
+#pauseIcon.paused .ic-pause { display: none; }
+
+/* mute: show crossed speaker when muted */
+#muteIcon .ic-sound { display: block; }
+#muteIcon .ic-muted { display: none; }
+#muteIcon.muted .ic-sound { display: none; }
+#muteIcon.muted .ic-muted { display: block; }
+
+/* ---------- Camera rotate buttons ---------- */
+
 .rotate-button {
   position: fixed;
-  bottom: 20px;
-  width: 50px;
-  height: 50px;
-  background: linear-gradient(45deg, rgba(0, 255, 255, 0.2), rgba(255, 255, 255, 0.2));
-  border: 1px solid rgba(0, 255, 255, 0.4);
+  bottom: 18px;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
   border-radius: 50%;
-  font-size: 24px;
-  color: #ffffff;
-  text-align: center;
-  line-height: 50px;
-  cursor: pointer;
-  user-select: none;
-  box-shadow: 0 0 6px rgba(0, 255, 255, 0.3);
+  backdrop-filter: blur(6px);
   z-index: 20;
-  transition: background 0.2s, border 0.2s, box-shadow 0.2s;
+  transition: transform 0.12s ease, border-color 0.12s ease;
 }
 
-.rotate-button:hover {
-  background: linear-gradient(45deg, rgba(0, 255, 255, 0.3), rgba(255, 255, 255, 0.3));
-  border: 1px solid rgba(0, 255, 255, 0.6);
-  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
-}
+.rotate-button svg { width: 26px; height: 26px; }
+.rotate-button:hover { border-color: rgba(255, 255, 255, 0.4); }
+.rotate-button:active { transform: scale(0.94); }
 
-/* Positioning for left and right buttons: left button sits left of center,
-   right button right of center (they were swapped before). */
+/* left button sits left of center, right button right of center */
 #rotateLeftButton {
   left: 50%;
-  transform: translateX(calc(-100% - 26px));
+  transform: translateX(calc(-100% - 24px));
 }
-
 #rotateRightButton {
   left: 50%;
-  transform: translateX(26px);
+  transform: translateX(24px);
 }
+#rotateLeftButton:hover { transform: translateX(calc(-100% - 24px)) scale(1.06); }
+#rotateRightButton:hover { transform: translateX(24px) scale(1.06); }
 
-/* Help and Options popups */
+/* ---------- Popups ---------- */
+
 .popup {
   display: none;
   position: fixed;
+  inset: 0;
   z-index: 100;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0, 0, 0, 0.5);
+  background: rgba(5, 6, 10, 0.6);
+  backdrop-filter: blur(3px);
 }
 
 .popup-content {
-  background-color: #fefefe;
-  margin: 15% auto;
-  padding: 20px;
-  border: 1px solid #888;
-  width: 80%;
-  max-width: 400px;
-  font-family: sans-serif;
-  color: #333;
+  position: relative;
+  margin: min(18vh, 140px) auto 0;
+  padding: 26px 28px 24px;
+  width: min(88vw, 420px);
+  background: linear-gradient(180deg, #171926, #101219);
+  border: 1px solid var(--panel-line);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  text-align: center;
 }
 
-.close {
-  color: #aaa;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
+.popup-content h2 {
+  margin: 0 0 4px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
 }
 
-.close:hover,
-.close:focus {
-  color: black;
-  text-decoration: none;
-} 
+.brand-3d { color: var(--accent); }
+
+.tagline { margin: 6px 0 14px; color: var(--ink-dim); font-size: 14px; }
+
+.popup-content h3 {
+  margin: 14px 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.controls-table { margin: 0 auto; border-collapse: collapse; text-align: left; }
+.controls-table td {
+  padding: 5px 8px;
+  font-size: 13.5px;
+  color: var(--ink);
+  vertical-align: top;
+}
+.controls-table td:first-child { white-space: nowrap; text-align: right; }
+
+kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 2px 6px;
+  margin: 0 2px;
+  background: #232637;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  font-family: var(--font);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.btn {
+  display: inline-block;
+  margin-top: 18px;
+  padding: 12px 34px;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  border-radius: 999px;
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: #1c1602;
+  box-shadow: 0 6px 18px rgba(255, 210, 63, 0.28);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.btn.primary:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(255, 210, 63, 0.36); }
+.btn.primary:active { transform: translateY(0); }
+
+.credits { margin: 16px 0 0; font-size: 12px; color: var(--ink-dim); }
+.credits a { color: var(--accent); text-decoration: none; font-weight: 700; }
+.credits a:hover { text-decoration: underline; }
+
+/* ---------- Options ---------- */
+
+.option-row { margin-top: 16px; text-align: left; }
+.option-row label { display: block; font-size: 14px; margin: 8px 0; }
+.option-row p { margin: 0 0 4px; font-size: 14px; color: var(--ink-dim); font-weight: 700; }
+
+#speedSelect { width: 100%; accent-color: var(--accent); }
+#speedValue { font-size: 12px; color: var(--ink-dim); font-weight: 700; }
+
+input[type="radio"] { accent-color: var(--accent); margin-right: 6px; }
+
+/* ---------- Game over ---------- */
+
+#finalScore { font-size: 40px; font-weight: 800; margin: 10px 0 0; }
+.record { color: var(--accent); font-weight: 800; margin: 6px 0 0; letter-spacing: 1px; }
+.hidden { display: none; }
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 480px) {
+  #score { font-size: 22px; }
+  #nextPieceContainer { width: 104px; height: 104px; }
+  #controls { top: 128px; }
+  .popup-content { margin-top: 12vh; padding: 22px 20px 20px; }
+}

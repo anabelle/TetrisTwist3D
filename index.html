@@ -12,53 +12,78 @@
 </head>
 
 <body>
-  <div id="score">Score: 0</div>
-  <div id="highscore"></div>
-  <div id="nextPieceContainer"></div>
-  <!-- Controls -->
-  <div id="controls">
-    <div id="helpIcon" class="icon">?</div>
-    <div id="pauseIcon" class="icon">||</div>
-    <div id="muteIcon" class="icon">🔇</div>
-    <div id="optionsIcon" class="icon">⚙</div>
+  <div id="hud">
+    <div id="scorePanel">
+      <div id="score">0</div>
+      <div id="highscore"></div>
+    </div>
+    <div id="nextPieceContainer"></div>
+    <div id="controls">
+      <button id="helpIcon" class="icon" aria-label="Help" title="Help">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 9a3 3 0 1 1 4.6 2.5c-1 .7-1.6 1.3-1.6 2.5"/><circle cx="12" cy="17.5" r="0.6" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <button id="pauseIcon" class="icon" aria-label="Pause" title="Pause">
+        <svg class="ic-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6.5" y="5" width="4" height="14" rx="1.2"/><rect x="13.5" y="5" width="4" height="14" rx="1.2"/></svg>
+        <svg class="ic-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13c0 .8.9 1.3 1.6.9l10-6.5c.6-.4.6-1.4 0-1.8l-10-6.5C8.9 4.2 8 4.7 8 5.5z"/></svg>
+      </button>
+      <button id="muteIcon" class="icon" aria-label="Sound" title="Sound">
+        <svg class="ic-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 9H3v6h3.5L11 19V5z" fill="currentColor" stroke="none"/><path d="m16 9 5 6M21 9l-5 6"/></svg>
+        <svg class="ic-sound" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 9H3v6h3.5L11 19V5z" fill="currentColor" stroke="none"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12"/></svg>
+      </button>
+      <button id="optionsIcon" class="icon" aria-label="Options" title="Options">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
   </div>
   <!-- On-screen rotate buttons -->
-  <div id="rotateLeftButton" class="rotate-button">&#x21ba;</div>
-  <div id="rotateRightButton" class="rotate-button">&#x21bb;</div>
+  <button id="rotateLeftButton" class="rotate-button" aria-label="Rotate camera left">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10a8 8 0 1 1 2.3 7.1"/><path d="M4 4.5V10h5.5"/></svg>
+  </button>
+  <button id="rotateRightButton" class="rotate-button" aria-label="Rotate camera right">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10A8 8 0 1 0 17.7 17.1"/><path d="M20 4.5V10h-5.5"/></svg>
+  </button>
   <!-- Help popup -->
   <div id="helpPopup" class="popup">
     <div class="popup-content">
-      <span id="closeHelp" class="close">&times;</span>
-      <h2>Welcome to TetrisTwist 3D</h2>
-      <p>A 3D version of the classic Tetris game with a perspective twist.</p>
-      <h3>Game Controls</h3>
-      <p>You can use the keyboard or swipe on the screen to play.</p>
-      <ul>
-        <li><strong>⬅️/➡️</strong>: Move piece left/right relative to camera.</li>
-        <li><strong>⬆️</strong>: Rotate piece around X axis.</li>
-        <li><strong>⬇️</strong>: Rotate piece around Y axis.</li>
-        <li><strong>⏎ / Double Tap / Double Click</strong>: Fast drop piece.</li>
-        <li><strong>[space]</strong>: Rotate camera 90° (keyboard).</li>
-        <li><strong>🔄</strong>: Rotate camera 90°.</li>
-      </ul>
-      <p>Built with ❤️ by <a href="https://heyanabelle.com" target="_blank">@heyanabelle</a></p>
+      <h2>TetrisTwist <span class="brand-3d">3D</span></h2>
+      <p class="tagline">Drop the pieces into the pit. Complete a layer — or a row — to clear it.</p>
+      <h3>Controls</h3>
+      <table class="controls-table">
+        <tr><td><kbd>←</kbd><kbd>→</kbd></td><td>Move piece (relative to camera)</td></tr>
+        <tr><td><kbd>↑</kbd></td><td>Roll piece away from you</td></tr>
+        <tr><td><kbd>↓</kbd></td><td>Spin piece</td></tr>
+        <tr><td><kbd>Enter</kbd></td><td>Fast drop</td></tr>
+        <tr><td><kbd>Space</kbd></td><td>Rotate camera 90° (<kbd>Shift</kbd>+<kbd>Space</kbd> reverses)</td></tr>
+        <tr><td>Touch</td><td>Swipe to move / rotate · double-tap to drop · two-finger swipe to turn camera</td></tr>
+      </table>
+      <button id="closeHelp" class="btn primary">Play</button>
+      <p class="credits">Built with ❤️ by <a href="https://heyanabelle.com" target="_blank" rel="noopener">@heyanabelle</a></p>
     </div>
   </div>
   <!-- Options popup -->
   <div id="optionsPopup" class="popup">
     <div class="popup-content">
-      <span id="closeOptions" class="close">&times;</span>
       <h2>Options</h2>
-      <div>
-        <label for="speedSelect">Falling Speed (ms per drop): </label>
+      <div class="option-row">
+        <label for="speedSelect">Falling speed</label>
         <input type="range" id="speedSelect" min="200" max="2000" step="100" value="1000">
         <span id="speedValue">1000</span>
       </div>
-      <div style="margin-top: 10px;">
-        <p>Clearing Mode:</p>
-        <label><input type="radio" name="clearMode" value="layer" checked> Layer (complete horizontal layer)</label><br>
-        <label><input type="radio" name="clearMode" value="rows"> Rows (complete rows along both X and Z)</label>
+      <div class="option-row">
+        <p>Clearing mode:</p>
+        <label><input type="radio" name="clearMode" value="layer" checked> Layer — fill a whole floor</label>
+        <label><input type="radio" name="clearMode" value="rows"> Rows — fill a line along X or Z</label>
       </div>
+      <button id="closeOptions" class="btn primary">Done</button>
+    </div>
+  </div>
+  <!-- Game over popup -->
+  <div id="gameOverPopup" class="popup">
+    <div class="popup-content">
+      <h2>Game Over</h2>
+      <p id="finalScore"></p>
+      <p id="newRecord" class="record hidden">★ New record! ★</p>
+      <button id="restartButton" class="btn primary">Play again</button>
     </div>
   </div>
 
@@ -96,9 +121,16 @@
     const BOARD_WIDTH = 8, BOARD_DEPTH = 8, BOARD_HEIGHT = 20;
     let score = 0;
     let isPaused = true;
+    // Pause icon state (SVGs swap via .paused class in CSS)
+    function updatePauseIcon() {
+      const el = document.getElementById('pauseIcon');
+      el.classList.toggle('paused', isPaused);
+      el.setAttribute('aria-label', isPaused ? 'Play' : 'Pause');
+    }
+    updatePauseIcon();
     let highScore = Number(localStorage.getItem("highScore")) || 0;
     const highScoreElement = document.getElementById("highscore");
-    highScoreElement.textContent = highScore > 0 ? "High Score: " + highScore : "";
+    highScoreElement.textContent = highScore > 0 ? String(highScore) : "";
     // Game options: dropInterval in ms and clearMode ('layer' default or 'rows')
     let gameOptions = {
       dropInterval: 1000,
@@ -153,7 +185,7 @@
     const pieceRotateSound = new Audio("videogame_tetris-piece-rotate.mp3");
     pieceRotateSound.volume = 0.4; pieceRotateSound.muted = isMuted;
 
-    // Mute/unmute toggle
+    // Mute/unmute toggle (icon state via .muted class; SVGs swap in CSS)
     document.getElementById('muteIcon').addEventListener('click', () => {
       isMuted = !isMuted;
       backgroundMusic.setVolume(isMuted ? 0 : 0.5);
@@ -162,13 +194,13 @@
       rotateSound.muted = isMuted;
       gameOverSound.muted = isMuted;
       pieceRotateSound.muted = isMuted;
-      document.getElementById('muteIcon').textContent = isMuted ? '🔇' : '🔊';
+      document.getElementById('muteIcon').classList.toggle('muted', isMuted);
     });
 
     // Pause/Play toggle with muting on pause
     document.getElementById('pauseIcon').addEventListener('click', () => {
       isPaused = !isPaused;
-      document.getElementById('pauseIcon').textContent = isPaused ? '►' : '||';
+      updatePauseIcon();
       if (isPaused) {
         // Mute sounds when paused
         backgroundMusic.setVolume(0);
@@ -195,7 +227,7 @@
     optionsIcon.addEventListener('click', () => {
       optionsPopup.style.display = 'block';
       isPaused = true;
-      document.getElementById('pauseIcon').textContent = '►';
+      updatePauseIcon();
     });
     closeOptions.addEventListener('click', () => {
       optionsPopup.style.display = 'none';
@@ -211,7 +243,7 @@
       // Save current settings to localStorage
       localStorage.setItem("gameOptions", JSON.stringify(gameOptions));
       isPaused = false;
-      document.getElementById('pauseIcon').textContent = '||';
+      updatePauseIcon();
     });
     speedSelect.addEventListener('input', () => {
       speedValue.textContent = speedSelect.value;
@@ -221,11 +253,11 @@
     const helpPopup = document.getElementById('helpPopup');
     const helpIcon = document.getElementById('helpIcon');
     const closeHelp = document.getElementById('closeHelp');
-    helpIcon.addEventListener('click', () => { helpPopup.style.display = 'block'; isPaused = true; document.getElementById('pauseIcon').textContent = '►'; });
-    closeHelp.addEventListener('click', () => { helpPopup.style.display = 'none'; isPaused = false; document.getElementById('pauseIcon').textContent = '||'; });
+    helpIcon.addEventListener('click', () => { helpPopup.style.display = 'block'; isPaused = true; updatePauseIcon(); });
+    closeHelp.addEventListener('click', () => { helpPopup.style.display = 'none'; isPaused = false; updatePauseIcon(); });
     window.addEventListener('click', (event) => {
-      if (event.target === helpPopup) { helpPopup.style.display = 'none'; isPaused = false; document.getElementById('pauseIcon').textContent = '||'; }
-      if (event.target === optionsPopup) { optionsPopup.style.display = 'none'; isPaused = false; document.getElementById('pauseIcon').textContent = '||'; }
+      if (event.target === helpPopup) { helpPopup.style.display = 'none'; isPaused = false; updatePauseIcon(); }
+      if (event.target === optionsPopup) { optionsPopup.style.display = 'none'; isPaused = false; updatePauseIcon(); }
     });
 
     // --- Scene, camera, and renderer ---
@@ -251,13 +283,13 @@
     document.body.appendChild(renderer.domElement);
 
     // --- Background setup ---
+    // Calm vertical gradient (night-sky toy-shelf vibe) instead of the old
+    // animated rainbow shader: the pieces are the show, the backdrop stays quiet.
     let bgSphere;
-    if (isMobile) {
-      scene.background = new THREE.Color(0x111111);
-    } else {
+    {
       const bgGeometry = new THREE.SphereGeometry(500, 32, 32);
       const bgMaterial = new THREE.ShaderMaterial({
-        uniforms: { time: { value: 0.0 } },
+        uniforms: {},
         vertexShader: `
           varying vec3 vPos;
           void main(){
@@ -266,23 +298,20 @@
           }
         `,
         fragmentShader: `
-          uniform float time;
           varying vec3 vPos;
-          const float PI = 3.141592653589793;
           void main(){
-            float angle = atan(vPos.z, vPos.x);
-            float u = fract(angle / (2.0*PI) + 0.5);
-            float v = (asin(vPos.y)/PI) + 0.5;
-            float freq = 4.0;
-            vec3 color = vec3(
-              0.2 + 0.2*sin(time + freq*2.0*PI*u),
-              0.2 + 0.2*cos(time + freq*2.0*PI*v),
-              0.3 + 0.2*sin(time + freq*2.0*PI*u*0.5)
-            );
-            gl_FragColor = vec4(color, 1.0);
+            float h = clamp(vPos.y * 0.5 + 0.5, 0.0, 1.0);
+            vec3 bottom = vec3(0.10, 0.11, 0.16); // deep slate
+            vec3 top    = vec3(0.05, 0.05, 0.09); // near black
+            vec3 col = mix(bottom, top, h);
+            // faint warm floor glow near the horizon
+            float horizon = exp(-pow((h - 0.5) * 6.0, 2.0));
+            col += vec3(0.05, 0.03, 0.02) * horizon;
+            gl_FragColor = vec4(col, 1.0);
           }
         `,
-        side: THREE.BackSide
+        side: THREE.BackSide,
+        depthWrite: false
       });
       bgSphere = new THREE.Mesh(bgGeometry, bgMaterial);
       scene.add(bgSphere);
@@ -578,11 +607,31 @@
       nextPieceShape = randomShape();
       updateNextPiecePreview();
       if (!currentPiece.canMove(0, 0, 0)) {
-        gameOverSound.play();
-        alert("Game Over, Try again.");
-        resetGame();
+        showGameOver();
       }
     }
+    // --- Game over overlay (replaces the old blocking alert) ---
+    const gameOverPopup = document.getElementById('gameOverPopup');
+    let gameOverShown = false;
+    function showGameOver() {
+      gameOverShown = true;
+      gameOverSound.play();
+      const finalScoreEl = document.getElementById('finalScore');
+      finalScoreEl.textContent = "Score: " + score;
+      const isRecord = score > 0 && score >= highScore;
+      document.getElementById('newRecord').classList.toggle('hidden', !isRecord);
+      document.getElementById('restartButton').textContent = "Play again";
+      gameOverPopup.style.display = 'block';
+      isPaused = true;
+      updatePauseIcon();
+    }
+    document.getElementById('restartButton').addEventListener('click', () => {
+      gameOverPopup.style.display = 'none';
+      gameOverShown = false;
+      resetGame();
+      isPaused = false;
+      updatePauseIcon();
+    });
     function resetGame() {
       if (currentPiece) { scene.remove(currentPiece.group); currentPiece = null; }
       while (boardGroup.children.length > 0) { boardGroup.remove(boardGroup.children[0]); }
@@ -598,9 +647,9 @@
       spawnPiece();
     }
     function updateScore() {
-      document.getElementById('score').textContent = "Score: " + score;
+      document.getElementById('score').textContent = String(score);
       if (score > highScore) { highScore = score; localStorage.setItem("highScore", highScore); }
-      highScoreElement.textContent = highScore > 0 ? "High Score: " + highScore : "";
+      highScoreElement.textContent = highScore > 0 ? "BEST " + highScore : "";
     }
 
     // --- Updated clearLayers: Support for chain reactions in both layer and row modes ---
@@ -781,7 +830,7 @@
     previewRenderer.setSize(previewWidth, previewHeight);
     previewContainer.appendChild(previewRenderer.domElement);
     const previewScene = new THREE.Scene();
-    previewScene.background = new THREE.Color(0x222222);
+    previewScene.background = new THREE.Color(0x12141d);
     const previewCamera = new THREE.PerspectiveCamera(75, previewWidth / previewHeight, 0.1, 1000);
     let previewCameraAngle = 0;
     const previewCameraRadius = 3;
@@ -965,11 +1014,9 @@
     let lastTime = 0;
     function animate(time) {
       requestAnimationFrame(animate);
-      const delta = time - lastTime;
       lastTime = time;
       currentCameraTheta = THREE.MathUtils.lerp(currentCameraTheta, targetCameraTheta, 0.1);
       updateCamera();
-      if (!isMobile && bgSphere) { bgSphere.material.uniforms.time.value += delta * 0.0005; }
       if (!isPaused) {
         while (ghostGroup.children.length > 0) { ghostGroup.remove(ghostGroup.children[0]); }
         if (currentPiece) {
@@ -1014,7 +1061,7 @@
       previewCamera.updateProjectionMatrix();
       previewRenderer.setSize(previewWidth, previewHeight);
     }, 100));
-    window.addEventListener('load', () => { helpPopup.style.display = 'block'; isPaused = true; document.getElementById('pauseIcon').textContent = '►'; });
+    window.addEventListener('load', () => { helpPopup.style.display = 'block'; isPaused = true; updatePauseIcon(); });
   </script>
 </body>
 
